@@ -1,6 +1,19 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Space_Grotesk } from "next/font/google";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { Toaster } from "sonner";
+import Logo from "@/components/Floating/Logo";
+
+
+
+const space = Space_Grotesk({
+ subsets:["latin"]
+});
+
+<html className={space.className}></html>
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +40,27 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-screen flex flex-col bg-black text-white">
+
+        <Navbar />
+
+        {/* fixed navbar ka space */}
+        <main className="flex-1 pt-20">
+          {children}
+           <Toaster
+          position="top-right"
+          richColors
+          closeButton
+        />
+
+        </main>
+
+        <Footer />
+
+        {/* floating logo */}
+        <Logo />
+
+      </body>
     </html>
   );
 }
