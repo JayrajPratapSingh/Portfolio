@@ -12,7 +12,6 @@ import {
   FaHome,
   FaUser,
   FaFolderOpen,
-  FaEnvelope,
   FaLock,
 } from "react-icons/fa";
 
@@ -28,229 +27,224 @@ export default function Navbar() {
     {
       name: "Home",
       path: "/",
-      icon: <FaHome size={12} />,
+      icon: <FaHome size={13} />,
     },
     {
       name: "About",
       path: "/about",
-      icon: <FaUser size={12} />,
+      icon: <FaUser size={13} />,
     },
     {
       name: "Projects",
       path: "/projects",
-      icon: <FaFolderOpen size={12} />,
+      icon: <FaFolderOpen size={13} />,
     },
   ];
 
   return (
-    <nav className="fixed top-4 left-1/2 z-[999] w-[95%] -translate-x-1/2 md:w-[90%]">
+    <nav className="fixed top-4 left-1/2 z-[999] w-[95%] md:w-[90%] -translate-x-1/2">
 
-      <div
-        className="
-        relative overflow-hidden
-        rounded-full
-        border border-cyan-500/20
-        bg-black/30
-        px-6 py-3
-        backdrop-blur-2xl
-        shadow-[0_0_40px_rgba(0,255,255,.12)]
-      "
-      >
+      <div className="relative">
 
-        <NavBackground />
+        {/* NAVBAR */}
 
-        <div className="relative z-20 flex items-center justify-between">
+        <div
+          className="
+          relative
+          rounded-full
+          border border-cyan-500/20
+          bg-black/30
+          px-5 py-3
+          backdrop-blur-2xl
+          shadow-[0_0_40px_rgba(0,255,255,.12)]
+          overflow-visible
+          "
+        >
 
-          {/* Logo */}
+          <NavBackground />
 
-          <Link
-            href="/"
-            className="flex items-center gap-3"
-          >
-            <Image
-              src="/images/logo.png"
-              alt="logo"
-              width={42}
-              height={42}
-              className="
-              rounded-full
-              hover:rotate-180
-              duration-700
-              "
-            />
+          <div className="relative z-20 flex items-center justify-between">
 
-            <span className="
-             md:block
-            font-bold
-            tracking-[4px]
-            text-white
-            ">
-              PORTFOLIO
-            </span>
+            {/* Logo */}
 
-          </Link>
+            <Link
+              href="/"
+              className="flex items-center gap-3"
+            >
+              <Image
+                src="/images/logo.png"
+                alt="logo"
+                width={40}
+                height={40}
+                className="
+                rounded-full
+                transition
+                hover:rotate-180
+                duration-700
+                "
+              />
+
+              <span
+                className="
+                text-sm
+                md:text-base
+                font-bold
+                tracking-[2px]
+                md:tracking-[4px]
+                text-white
+                "
+              >
+                PORTFOLIO
+              </span>
+
+            </Link>
 
 
 
-          {/* Desktop */}
+            {/* Desktop */}
 
-          <div className="hidden items-center gap-3 md:flex">
+            <div className="hidden md:flex items-center gap-3">
 
-            {navItems.map((item) => (
+              {navItems.map((item) => (
+
+                <Link
+                  key={item.name}
+                  href={item.path}
+                  className={`
+                  flex
+                  items-center
+                  gap-2
+                  rounded-full
+                  px-4 py-2
+                  transition-all
+
+                  ${
+                    pathname === item.path
+                    ? "bg-cyan-500/20 text-cyan-300"
+                    : "text-white/70 hover:text-cyan-300 hover:bg-white/5"
+                  }
+                  `}
+                >
+
+                  {item.icon}
+
+                  {item.name}
+
+                </Link>
+
+              ))}
+
 
               <Link
-                key={item.name}
-                href={item.path}
-                className={`
-                group
+                href="https://github.com/JayrajPratapSingh"
+                target="_blank"
+                className="
+                p-3
+                rounded-full
+                border border-white/10
+                text-white/70
+                hover:border-cyan-400
+                hover:text-cyan-300
+                "
+              >
+                <FaGithub/>
+              </Link>
+
+
+              <Link
+                href="/resume.pdf"
+                target="_blank"
+                className="
                 flex
                 items-center
                 gap-2
-                px-4
-                py-2
+                px-4 py-2
                 rounded-full
-                transition-all
-                duration-300
-
-                ${
-                  pathname === item.path
-                    ? "bg-cyan-500/20 text-cyan-300 shadow-[0_0_20px_rgba(0,255,255,.25)]"
-                    : "text-white/70 hover:text-cyan-300 hover:bg-white/5"
-                }
-                `}
+                border border-white/10
+                text-white/70
+                hover:border-cyan-400
+                hover:text-cyan-300
+                "
               >
 
-                <span className="
-                opacity-70
-                group-hover:scale-110
-                transition
-                ">
-                  {item.icon}
-                </span>
+                <Download size={16}/>
 
-                {item.name}
+                Resume
 
               </Link>
 
-            ))}
+
+              <Link
+                href="/admin/login"
+                className="
+                p-3
+                rounded-full
+                border border-white/10
+                text-white/40
+                hover:text-cyan-300
+                "
+              >
+
+                <FaLock/>
+
+              </Link>
 
 
-            {/* Github */}
+              <Link
+                href="/hire-me"
+                className="
+                px-5 py-2
+                rounded-full
+                bg-cyan-400
+                text-black
+                font-semibold
+                hover:scale-105
+                transition
+                "
+              >
+                Hire Me
+              </Link>
 
-            <Link
-              href="https://github.com/JayrajPratapSingh"
-              target="_blank"
+            </div>
+
+
+
+            {/* Mobile button */}
+
+            <button
+              onClick={() => setOpen(!open)}
               className="
-              rounded-full
-              border border-white/10
-              p-3
-              text-white/70
-              hover:text-cyan-300
-              hover:border-cyan-400
-              transition
+              text-white
+              text-xl
+              md:hidden
               "
             >
-              <FaGithub />
-            </Link>
-
-
-            {/* Resume */}
-
-            <Link
-              href="/resume.pdf"
-              target="_blank"
-              className="
-              flex items-center gap-2
-              rounded-full
-              border border-white/10
-              px-4 py-2
-              text-white/70
-              hover:text-cyan-300
-              hover:border-cyan-400
-              transition
-              "
-            >
-
-              <Download size={16}/>
-              Resume
-
-            </Link>
-
-
-            {/* Admin */}
-
-            <Link
-              href="/portal-x-admin/login"
-              className="
-              rounded-full
-              border border-white/10
-              p-3
-              text-white/40
-              hover:text-cyan-300
-              hover:border-cyan-400
-              transition
-              "
-            >
-
-              <FaLock size={12}/>
-
-            </Link>
-
-
-            {/* Hire Me */}
-
-            <Link
-              href="/contact"
-              className="
-              rounded-full
-              bg-cyan-400
-              px-5 py-2
-              text-black
-              font-semibold
-              hover:scale-105
-              hover:shadow-[0_0_30px_cyan]
-              transition
-              "
-            >
-              Hire Me
-            </Link>
+              {open ? <FaTimes/> : <FaBars/>}
+            </button>
 
           </div>
 
-
-          {/* Mobile */}
-
-          <button
-            onClick={() =>
-              setOpen(!open)
-            }
-            className="
-            text-white
-            md:hidden
-            text-xl
-            "
-          >
-            {open ?
-            <FaTimes/>
-            :
-            <FaBars/>
-            }
-
-          </button>
-
         </div>
 
+
+
+        {/* MOBILE DRAWER */}
 
         {open && (
 
           <div
             className="
-            mt-5
-            rounded-3xl
-            border border-white/10
-            bg-black/90
+            absolute
+            top-[85px]
+            left-0
+            w-full
+            rounded-[30px]
+            border border-cyan-500/20
+            bg-black/95
+            backdrop-blur-3xl
             p-5
             space-y-3
+            shadow-[0_0_40px_rgba(0,255,255,.2)]
             md:hidden
             "
           >
@@ -260,19 +254,21 @@ export default function Navbar() {
               <Link
                 key={item.name}
                 href={item.path}
-                onClick={()=>
-                setOpen(false)
-                }
-                className="
+                onClick={()=>setOpen(false)}
+                className={`
                 flex
                 items-center
                 gap-3
-                rounded-xl
-                px-4 py-3
-                text-white/70
-                hover:text-cyan-300
-                hover:bg-cyan-500/10
-                "
+                rounded-2xl
+                px-4
+                py-4
+
+                ${
+                  pathname===item.path
+                  ? "bg-cyan-500/20 text-cyan-300"
+                  : "text-white/70"
+                }
+                `}
               >
 
                 {item.icon}
@@ -283,19 +279,61 @@ export default function Navbar() {
 
             ))}
 
+
+            <div className="flex gap-3">
+
+              <Link
+                href="https://github.com/JayrajPratapSingh"
+                target="_blank"
+                className="
+                flex-1
+                rounded-xl
+                border border-white/10
+                p-4
+                flex justify-center
+                text-white
+                "
+              >
+
+                <FaGithub/>
+
+              </Link>
+
+
+              <Link
+                href="/admin/login"
+                className="
+                flex-1
+                rounded-xl
+                border border-white/10
+                p-4
+                flex justify-center
+                text-white
+                "
+              >
+
+                <FaLock/>
+
+              </Link>
+
+            </div>
+
+
             <Link
-              href="/portal-x-admin/login"
+              href="/hire-me"
               className="
-              flex items-center
-              gap-3
-              rounded-xl
-              px-4 py-3
-              text-white/70
+              block
+              w-full
+              rounded-2xl
+              bg-cyan-400
+              py-4
+              text-center
+              text-black
+              font-bold
               "
             >
-              <FaLock/>
 
-              Admin
+              Hire Me
 
             </Link>
 
@@ -304,6 +342,7 @@ export default function Navbar() {
         )}
 
       </div>
+
     </nav>
   );
 }

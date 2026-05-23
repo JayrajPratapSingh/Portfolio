@@ -1,122 +1,135 @@
-
 "use client";
 
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, Stars, Sparkles } from "@react-three/drei";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useRef, useMemo, useState } from "react";
+import * as THREE from "three";
 import { motion } from "framer-motion";
-import { useRef } from "react";
-import { useForm } from "react-hook-form";
-import { Lock, Mail, ArrowRight } from "lucide-react";
+import { FiMail, FiLock } from "react-icons/fi";
 
-function Portal() {
-  const ref = useRef<any>(null);
+/* 🔥 LIVING PARTICLE FIELD */
+function ParticleField() {
+  const points = useRef<THREE.Points>(null);
+  const { size, mouse } = useThree();
 
-  useFrame(({ clock }) => {
-    if (!ref.current) return;
-    ref.current.rotation.z = clock.elapsedTime * 0.2;
-    ref.current.rotation.x = Math.sin(clock.elapsedTime) * 0.3;
+  const particles = useMemo(() => {
+    const count = 4000;
+    const positions = new Float32Array(count * 3);
+
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 10;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 10;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+    }
+
+    return positions;
+  }, []);
+
+  useFrame((state) => {
+    if (!points.current) return;
+
+    const t = state.clock.getElapsedTime();
+
+    points.current.rotation.y = t * 0.05;
+
+    const pos = points.current.geometry.attributes.position as THREE.BufferAttribute;
+
+    for (let i = 0; i < pos.count; i++) {
+      const ix = i * 3;
+
+      const x = pos.array[ix];
+      const y = pos.array[ix + 1];
+
+      // 🔥 FLOW FIELD MOTION (LIVING SYSTEM FEEL)
+      pos.array[ix + 2] =
+        Math.sin(x * 1.5 + t) * 0.5 +
+        Math.cos(y * 1.5 + t) * 0.5;
+    }
+
+    pos.needsUpdate = true;
   });
 
   return (
-    <Float speed={3}>
-      <mesh ref={ref}>
-        <torusGeometry args={[2.5, 0.6, 32, 100]} />
-        <meshStandardMaterial wireframe />
-      </mesh>
-    </Float>
+    <points ref={points}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          args={[particles, 3]}
+        />
+      </bufferGeometry>
+
+      <pointsMaterial
+        size={0.02}
+        color="#00ffff"
+        transparent
+        opacity={0.6}
+      />
+    </points>
   );
 }
 
+/* 🌌 SCENE */
 function Scene() {
   return (
-    <Canvas camera={{ position: [0, 0, 8] }}>
-      <ambientLight intensity={2} />
-      <pointLight position={[4, 4, 4]} />
-      <Stars radius={100} count={6000} factor={4} fade />
-      <Sparkles count={150} scale={12} speed={2} />
-      <Portal />
-    </Canvas>
+    <>
+      <color attach="background" args={["#02040a"]} />
+      <ParticleField />
+    </>
   );
 }
 
-export default function LoginPage() {
-  const { register, handleSubmit } = useForm();
-
-  const submit = (data:any) => {
-    console.log(data);
-  };
+/* 🔐 LOGIN UI */
+export default function Login() {
+  const [loading, setLoading] = useState(false);
 
   return (
-    <main className="min-h-screen bg-black text-white grid lg:grid-cols-2 overflow-hidden">
-      <div className="relative hidden lg:block">
+    <div className="h-screen w-full bg-black relative overflow-hidden text-white">
+
+      {/* 🔥 LIVE BACKGROUND */}
+      <Canvas camera={{ position: [0, 0, 6], fov: 60 }}>
         <Scene />
+      </Canvas>
 
-        <div className="absolute top-24 left-14 z-10 max-w-md">
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="tracking-[6px] text-cyan-400"
-          >
-            ADMIN ACCESS
-          </motion.p>
+      {/* DARK DEPTH LAYER */}
+      <div className="absolute inset-0 bg-black/60" />
 
-          <h1 className="text-6xl font-black mt-4 leading-none">
-            Enter The
-            <br />
-            Dev Portal.
+      {/* LOGIN CARD */}
+      <div className="absolute inset-0 flex items-center justify-center z-10">
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8 }}
+          className="w-[400px] p-8 rounded-2xl bg-white/5 border border-cyan-400/20 backdrop-blur-2xl shadow-[0_0_80px_#00ffff10]"
+        >
+
+          <h1 className="text-center text-cyan-300 tracking-[0.3em] mb-6">
+            AUTH TERMINAL
           </h1>
 
-          <p className="text-zinc-400 mt-6">
-            Restricted dashboard access. Authenticate to control your universe.
-          </p>
-        </div>
+          <div className="space-y-4">
+
+            <div className="flex items-center gap-3 p-3 bg-black/50 border border-white/10 rounded-lg">
+              <FiMail />
+              <input className="bg-transparent w-full outline-none" placeholder="email@system.io" />
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-black/50 border border-white/10 rounded-lg">
+              <FiLock />
+              <input type="password" className="bg-transparent w-full outline-none" placeholder="password" />
+            </div>
+
+            <button
+              onClick={() => setLoading(true)}
+              className="w-full py-3 bg-cyan-400 text-black font-bold rounded-lg hover:bg-cyan-300 transition"
+            >
+              {loading ? "AUTHENTICATING..." : "ENTER"}
+            </button>
+
+          </div>
+
+        </motion.div>
+
       </div>
-
-      <div className="flex items-center justify-center p-8">
-        <motion.form
-          onSubmit={handleSubmit(submit)}
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md rounded-[32px] border border-white/10 bg-white/[0.04] backdrop-blur-2xl p-8 shadow-2xl space-y-6"
-        >
-          <div>
-            <h2 className="text-4xl font-bold">
-              Welcome Back 👋
-            </h2>
-            <p className="text-zinc-400 mt-2">
-              Login to edit your portfolio.
-            </p>
-          </div>
-
-          <div className="relative">
-            <Mail className="absolute left-4 top-4 text-cyan-400" />
-            <input
-              {...register("email")}
-              placeholder="Admin email"
-              className="w-full h-14 pl-12 rounded-xl bg-black/40 border border-white/10 outline-none"
-            />
-          </div>
-
-          <div className="relative">
-            <Lock className="absolute left-4 top-4 text-cyan-400" />
-            <input
-              type="password"
-              {...register("password")}
-              placeholder="Password"
-              className="w-full h-14 pl-12 rounded-xl bg-black/40 border border-white/10 outline-none"
-            />
-          </div>
-
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.96 }}
-            className="w-full h-14 rounded-xl bg-cyan-500 font-bold flex items-center justify-center gap-2"
-          >
-            Access Dashboard
-            <ArrowRight size={18} />
-          </motion.button>
-        </motion.form>
-      </div>
-    </main>
+    </div>
   );
 }
