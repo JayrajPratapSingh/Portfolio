@@ -156,20 +156,31 @@ function OrbitBones() {
 
     ref.current.rotation.y = t * 0.3;
 
-    ref.current.children.forEach((child: any, i) => {
+    ref.current.children.forEach(
+  (
+    child: THREE.Object3D,
+    i: number
+  ) => {
 
-      const b = bones[i];
+    const b = bones[i];
 
-      child.position.x =
-        Math.cos(t * b.speed + b.angle) * 3.2;
+    child.position.x =
+      Math.cos(
+        t * b.speed + b.angle
+      ) * 3.2;
 
-      child.position.z =
-        Math.sin(t * b.speed + b.angle) * 3.2;
+    child.position.z =
+      Math.sin(
+        t * b.speed + b.angle
+      ) * 3.2;
 
-      child.position.y =
-        Math.sin(t * 2 + b.angle) * 0.6;
+    child.position.y =
+      Math.sin(
+        t * 2 + b.angle
+      ) * 0.6;
 
-    });
+  }
+);
 
   });
 
