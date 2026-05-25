@@ -80,7 +80,7 @@ function OrbitNode({
 
 function ReactRing(){
 
-  const points=[];
+    const points: [number, number, number][] = [];
 
   for(let i=0;i<=100;i++){
 

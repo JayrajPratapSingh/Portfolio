@@ -79,30 +79,30 @@ function OrbitDot({
 }
 
 
-function HexOutline(){
+function HexOutline() {
 
-  const points=[];
+  const points: [number, number, number][] = [];
 
-  for(
-    let i=0;
-    i<=6;
+  for (
+    let i = 0;
+    i <= 6;
     i++
-  ){
+  ) {
 
-    const a=
-      (i/6)*
-      Math.PI*2+
-      Math.PI/6;
+    const a =
+      (i / 6) *
+      Math.PI * 2 +
+      Math.PI / 6;
 
     points.push([
-      Math.cos(a)*2,
-      Math.sin(a)*2,
+      Math.cos(a) * 2,
+      Math.sin(a) * 2,
       0
     ]);
 
   }
 
-  return(
+  return (
 
     <Line
       points={points}
