@@ -107,27 +107,26 @@ function ReactorRing({
 }: {
   radius: number;
 }) {
-  const points = [];
+
+  const points: [number, number, number][] = [];
 
   for (
     let i = 0;
     i <= 120;
     i++
   ) {
+
     const a =
       (i / 120) *
       Math.PI *
       2;
 
     points.push([
-      Math.cos(a) *
-        radius,
-
-      Math.sin(a) *
-        radius,
-
+      Math.cos(a) * radius,
+      Math.sin(a) * radius,
       0,
     ]);
+
   }
 
   return (
@@ -140,7 +139,6 @@ function ReactorRing({
     />
   );
 }
-
 
 
 export default function FullStackCore() {
