@@ -29,7 +29,7 @@ async function dbConnect() {
 
     cached.promise =
       mongoose.connect(
-        MONGODB_URI
+        MONGODB_URI!
       )
       .then((mongoose) => {
 
