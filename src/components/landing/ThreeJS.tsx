@@ -136,6 +136,7 @@ function NeuralField() {
 
 /* ⚡ ORBITING BONES (NOW DYNAMIC) */
 function OrbitBones() {
+
   const ref = useRef<any>(null);
 
   const bones = useMemo(
@@ -148,33 +149,54 @@ function OrbitBones() {
   );
 
   useFrame(({ clock }) => {
+
     const t = clock.getElapsedTime();
+
     if (!ref.current) return;
 
     ref.current.rotation.y = t * 0.3;
+
+    ref.current.children.forEach((child: any, i) => {
+
+      const b = bones[i];
+
+      child.position.x =
+        Math.cos(t * b.speed + b.angle) * 3.2;
+
+      child.position.z =
+        Math.sin(t * b.speed + b.angle) * 3.2;
+
+      child.position.y =
+        Math.sin(t * 2 + b.angle) * 0.6;
+
+    });
+
   });
 
   return (
+
     <group ref={ref}>
+
       {bones.map((b, i) => (
-        <mesh
-          key={i}
-          position={[
-            Math.cos(b.angle + i * 0.2) * 3.2,
-            Math.sin(t => Math.sin(t * b.speed)) * 0.6,
-            Math.sin(b.angle + i * 0.2) * 3.2,
-          ]}
-        >
+
+        <mesh key={i}>
+
           <boxGeometry args={[0.12, 0.6, 0.12]} />
+
           <meshStandardMaterial
             color="#7c3aed"
             emissive="#4c1d95"
             emissiveIntensity={2}
           />
+
         </mesh>
+
       ))}
+
     </group>
+
   );
+
 }
 
 /* 🌌 STARS */
