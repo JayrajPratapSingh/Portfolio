@@ -134,7 +134,7 @@ function Pulse({
 }){
 
 const ref=
-useRef<any>();
+useRef<any>(null);
 
 useFrame((state)=>{
 

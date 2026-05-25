@@ -84,7 +84,7 @@ scale
 }:any){
 
 const ref=
-useRef<any>();
+useRef<any>(null);
 
 useFrame(()=>{
 

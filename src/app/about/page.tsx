@@ -44,16 +44,16 @@ import * as THREE from "three";
 
 function NeuralOrb() {
   const ref =
-    useRef<any>();
+    useRef<any>(null);
 
   const ring1 =
-    useRef<any>();
+    useRef<any>(null);
 
   const ring2 =
-    useRef<any>();
+    useRef<any>(null);
 
   const shell =
-    useRef<any>();
+    useRef<any>(null);
 
   useFrame((state) => {
     const t =

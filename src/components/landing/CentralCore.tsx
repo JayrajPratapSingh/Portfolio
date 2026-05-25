@@ -148,10 +148,10 @@ export default function FullStackCore() {
     useRef<THREE.Group>(null);
 
   const coreRef =
-    useRef<any>();
+    useRef<any>(null);
 
   const shellRef =
-    useRef<any>();
+    useRef<any>(null);
 
   const techs = useMemo(
     () => [

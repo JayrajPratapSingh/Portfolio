@@ -84,7 +84,7 @@ function OrbitRing({ radius }: any) {
 }
 
 function TechPlanet({ name, angle, radius }: any) {
-  const ref = useRef<any>();
+  const ref = useRef<any>(null);
 
   useFrame((state) => {
     if (!ref.current) return;

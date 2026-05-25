@@ -13,7 +13,7 @@ import { useMemo, useRef } from "react";
 
 function ParticleVortex() {
 
-const points=useRef<any>()
+const points=useRef<any>(null)
 
 const particles=useMemo(()=>{
 
@@ -82,7 +82,7 @@ opacity={0.8}
 
 function Portal(){
 
-const mesh=useRef<any>()
+const mesh=useRef<any>(null)
 
 useFrame(({clock})=>{
 
