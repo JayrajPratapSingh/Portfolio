@@ -10,6 +10,7 @@ MeshTransmissionMaterial
 
 import * as THREE from "three";
 import { useMemo, useRef } from "react";
+import { BufferAttribute } from "three";
 
 function ParticleVortex() {
 
@@ -59,10 +60,8 @@ return(
 <bufferGeometry>
 
 <bufferAttribute
-attach="attributes-position"
-count={particles.length/3}
-array={particles}
-itemSize={3}
+  attach="attributes-position"
+  args={[particles, 3]}
 />
 
 </bufferGeometry>
