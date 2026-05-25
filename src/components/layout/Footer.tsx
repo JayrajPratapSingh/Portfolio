@@ -38,10 +38,8 @@ function MemoryField() {
     <points ref={ref}>
       <bufferGeometry>
         <bufferAttribute
-          attach="attributes-position"
-          array={points}
-          count={points.length / 3}
-          itemSize={3}
+         attach="attributes-position"
+         args={[points, 3]}
         />
       </bufferGeometry>
 
