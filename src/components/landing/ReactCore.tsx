@@ -20,7 +20,7 @@ import * as THREE from "three";
 
 function ReactOrbit(){
 
-  const points=[];
+  const points: [number, number, number][] = [];
 
   for(
     let i=0;
