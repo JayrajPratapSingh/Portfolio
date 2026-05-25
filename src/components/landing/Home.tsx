@@ -1,15 +1,13 @@
 import Intro from "@/components/landing/Intro";
 import ScrollWords from "@/components/landing/ScrollWords";
 import DesignMatters from "../landing/DesignMatters";
-import Anzo from "../landing/Anzo";
+import Anzo from "./Anzo";
 import Future from "../landing/Future";
 import ThreeJS from "../landing/ThreeJS";
-import DevSolarSection from "../landing/DevSolarSection";
 export default function Home() {
   return (
     <>
     <Intro/>
-    <DevSolarSection />
     <ThreeJS />
     <DesignMatters />
     <ScrollWords/>
