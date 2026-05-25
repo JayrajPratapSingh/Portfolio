@@ -86,32 +86,33 @@ function OrbitCube({
 
 
 
-function GridFrame(){
+function GridFrame() {
 
-const points=[
+  const points: [number, number, number][] = [
 
-[-2,-2,0],
-[2,-2,0],
+    [-2, -2, 0],
+    [ 2, -2, 0],
 
-[2,-2,0],
-[2,2,0],
+    [ 2, -2, 0],
+    [ 2,  2, 0],
 
-[2,2,0],
-[-2,2,0],
+    [ 2,  2, 0],
+    [-2,  2, 0],
 
-[-2,2,0],
-[-2,-2,0]
+    [-2,  2, 0],
+    [-2, -2, 0],
 
-];
+  ];
 
-return(
+  return (
 
-<Line
-points={points}
-color="#3178C6"
-/>
+    <Line
+      points={points}
+      color="#3178C6"
+      lineWidth={1}
+    />
 
-);
+  );
 
 }
 
