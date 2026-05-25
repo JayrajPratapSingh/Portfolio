@@ -386,19 +386,11 @@ function Scene() {
       />
 
       <Environment preset="night" />
-
-      <Cloud
-        opacity={0.12}
-        speed={0.2}
-        width={18}
-        depth={2}
-        segments={20}
-        position={[
-          0,
-          8,
-          -12,
-        ]}
-      />
+<Cloud
+  opacity={0.12}
+  speed={0.2}
+  position={[0, 4, -10]}
+/>
 
       <Float
         speed={1.5}
