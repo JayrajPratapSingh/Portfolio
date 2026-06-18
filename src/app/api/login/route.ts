@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
-
+console.log("Login attempt:", email)
     await dbConnect(); // 🔥 yahi main use hai
 
     const user = await User.findOne({ email });
