@@ -3,11 +3,12 @@ import dbConnect from "@/lib/db"; // tera db.ts
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { createToken } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
-console.log("Login attempt:", email)
+    if (!email || !password) return NextResponse.json({ message: "Email and password are required" }, { status: 422 });
     await dbConnect(); // 🔥 yahi main use hai
 
     const user = await User.findOne({ email });
@@ -31,16 +32,13 @@ console.log("Login attempt:", email)
       );
     }
 
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" }
-    );
-
-    return NextResponse.json({
+    const token = createToken({ id: user._id.toString(), email: user.email, role: "admin" });
+    const response = NextResponse.json({
       message: "Login success",
-      token,
+      user: { email: user.email, role: "admin" },
     });
+    response.cookies.set("admin_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 60 * 60 * 24 * 7, path: "/" });
+    return response;
 
   } catch (err) {
     return NextResponse.json(

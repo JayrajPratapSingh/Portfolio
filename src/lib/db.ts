@@ -10,12 +10,6 @@ dns.setServers([
 
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI;
-console.log("MONGODB_URI:", MONGODB_URI)
-if (!MONGODB_URI) {
-  throw new Error("MONGODB_URI missing");
-}
-
 let cached = (global as any).mongoose;
 
 if (!cached) {
@@ -27,13 +21,15 @@ if (!cached) {
 
 async function dbConnect() {
   try {
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) throw new Error("MONGODB_URI missing");
     if (cached.conn) {
       return cached.conn;
     }
 
     if (!cached.promise) {
       cached.promise = mongoose
-        .connect(MONGODB_URI)
+        .connect(mongoUri)
         .then((mongoose) => {
           console.log("✅ Mongo Connected");
           return mongoose;

@@ -503,7 +503,7 @@ export default function ProjectsPage() {
     );
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-black text-white">
+    <main className="projects-page relative min-h-screen overflow-hidden bg-black text-white">
       {/* 3D BG */}
 
       <div className="fixed inset-0 z-0">
@@ -528,7 +528,7 @@ export default function ProjectsPage() {
       <div className="relative z-10">
         {/* HERO */}
 
-        <section className="min-h-screen flex items-center px-6 md:px-16 py-20">
+        <section className="projects-hero min-h-screen flex items-center px-6 md:px-16 py-20">
           <div className="max-w-7xl mx-auto w-full">
             <motion.div
               initial={{
@@ -726,7 +726,7 @@ export default function ProjectsPage() {
 
         {/* ALL PROJECTS */}
 
-        <section className="px-6 md:px-16 pb-32">
+        <section className="projects-grid px-6 md:px-16 pb-32">
           <div className="max-w-7xl mx-auto">
             <div className="mb-16">
               <div className="text-cyan-300 uppercase tracking-[0.3em] text-xs mb-4">

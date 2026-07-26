@@ -37,7 +37,7 @@ export default function Future() {
   return (
     <section
       ref={containerRef}
-      className="
+      className="home-future-section
       relative
       h-screen
       overflow-hidden

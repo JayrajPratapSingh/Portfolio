@@ -218,7 +218,7 @@ function DeepStars() {
 /* 🚀 MAIN HERO */
 export default function AlienSkullHero() {
   return (
-    <section className="relative h-screen w-full bg-black overflow-hidden">
+    <section className="home-neural-section relative h-screen w-full bg-black overflow-hidden">
 
       {/* UI */}
       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center pointer-events-none">

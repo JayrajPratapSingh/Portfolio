@@ -5,7 +5,9 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json();
+    const { email, password, setupSecret } = await req.json();
+    if (!process.env.ADMIN_SETUP_SECRET || setupSecret !== process.env.ADMIN_SETUP_SECRET) return NextResponse.json({ message: "Registration is disabled" }, { status: 403 });
+    if (!email || typeof password !== "string" || password.length < 8) return NextResponse.json({ message: "Use a valid email and a password of at least 8 characters" }, { status: 422 });
 
      await dbConnect();
 

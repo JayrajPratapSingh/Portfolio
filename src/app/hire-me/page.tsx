@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 
 export default function ContactPage() {
   return (
-    <main className="min-h-screen bg-black overflow-hidden text-white px-6">
+    <main className="hire-page min-h-screen bg-black overflow-hidden text-white px-6">
 
       <div className="max-w-7xl mx-auto min-h-screen grid lg:grid-cols-2 gap-10 items-center">
 

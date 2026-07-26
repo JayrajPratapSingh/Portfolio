@@ -1,313 +1,143 @@
 "use client";
 
-import {
-Float
-} from "@react-three/drei";
+import { Float } from "@react-three/drei";
 
-import {
-useFrame
-} from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 
-import {
-useMemo,
-useRef
-} from "react";
+import { useMemo, useRef } from "react";
 
 import * as THREE from "three";
 
+function Particle({ angle }: { angle: number }) {
+  const ref = useRef<THREE.Mesh>(null);
 
-function Particle({
-angle
-}:{
-angle:number
-}){
+  useFrame((state) => {
+    if (!ref.current) return;
 
-const ref=
-useRef<THREE.Mesh>(null);
+    const t = state.clock.elapsedTime;
 
-useFrame((state)=>{
+    const r = 2;
 
-if(!ref.current)
-return;
+    ref.current.position.x = Math.cos(t + angle) * r;
 
-const t=
-state.clock.elapsedTime;
+    ref.current.position.z = Math.sin(t + angle) * r;
 
-const r=2;
+    ref.current.position.y = Math.sin(t * 2 + angle) * 0.8;
+  });
 
-ref.current.position.x=
-Math.cos(
-t+angle
-)*r;
+  return (
+    <mesh ref={ref}>
+      <sphereGeometry args={[0.05, 16, 16]} />
 
-ref.current.position.z=
-Math.sin(
-t+angle
-)*r;
-
-ref.current.position.y=
-Math.sin(
-t*2+angle
-)*.8;
-
-})
-
-return(
-
-<mesh ref={ref}>
-
-<sphereGeometry
-args={[
-.05,
-16,
-16
-]}
-/>
-
-<meshBasicMaterial
-color="#ffca28"
-/>
-
-</mesh>
-
-)
-
+      <meshBasicMaterial color="#ffca28" />
+    </mesh>
+  );
 }
 
+function CrystalShard({ position, rotation, color, scale }: any) {
+  const ref = useRef<any>(null);
 
+  useFrame(() => {
+    if (!ref.current) return;
 
-function CrystalShard({
-position,
-rotation,
-color,
-scale
-}:any){
+    ref.current.rotation.y += 0.01;
+  });
 
-const ref=
-useRef<any>(null);
+  return (
+    <mesh ref={ref} position={position} rotation={rotation} scale={scale}>
+      <coneGeometry args={[0.7, 2.4, 3]} />
 
-useFrame(()=>{
-
-if(!ref.current)
-return;
-
-ref.current.rotation.y+=
-0.01;
-
-})
-
-return(
-
-<mesh
-ref={ref}
-position={position}
-rotation={rotation}
-scale={scale}
->
-
-<coneGeometry
-args={[
-0.7,
-2.4,
-3
-]}
-/>
-
-<meshStandardMaterial
-color={color}
-emissive={color}
-emissiveIntensity={3}
-metalness={1}
-roughness={0}
- />
-
-</mesh>
-
-)
-
+      <meshStandardMaterial
+        color={color}
+        emissive={color}
+        emissiveIntensity={3}
+        metalness={1}
+        roughness={0}
+      />
+    </mesh>
+  );
 }
 
+export default function FirebaseCore() {
+  const group = useRef<THREE.Group>(null);
 
+  const particles = useMemo(
+    () =>
+      Array.from({
+        length: 8,
+      }),
+    [],
+  );
 
-export default function FirebaseCore(){
+  useFrame((state) => {
+    if (!group.current) return;
 
-const group=
-useRef<THREE.Group>(null);
+    group.current.rotation.y += 0.008;
 
-const particles=
-useMemo(
-()=>Array.from({
-length:8
-}),
-[]
-);
+    group.current.position.y = Math.sin(state.clock.elapsedTime) * 0.12;
+  });
 
-useFrame((state)=>{
+  return (
+    <group ref={group} scale={0.8}>
+      <Float speed={3} floatIntensity={1.2} rotationIntensity={0.3}>
+        {/* outer glow */}
 
-if(!group.current)
-return;
+        <mesh>
+          <octahedronGeometry args={[2.2]} />
 
-group.current.rotation.y+=
-0.008;
+          <meshBasicMaterial
+            transparent
+            opacity={0.04}
+            color="#ffca28"
+            wireframe
+          />
+        </mesh>
 
-group.current.position.y=
-Math.sin(
-state.clock.elapsedTime
-)*0.12;
+        {/* left shard */}
 
-})
+        <CrystalShard
+          position={[-0.55, 0, 0]}
+          rotation={[0, 0, 0.5]}
+          scale={[0.8, 1.2, 0.8]}
+          color="#ff9800"
+        />
 
-return(
+        {/* center shard */}
 
-<group
-ref={group}
-scale={0.8}
->
+        <CrystalShard
+          position={[0, 0.4, 0]}
+          rotation={[0, 0, 0]}
+          scale={[1, 1.5, 1]}
+          color="#ffb300"
+        />
 
-<Float
-speed={3}
-floatIntensity={1.2}
-rotationIntensity={0.3}
->
+        {/* right shard */}
 
-{/* outer glow */}
+        <CrystalShard
+          position={[0.65, -0.1, 0]}
+          rotation={[0, 0, -0.45]}
+          scale={[0.8, 1.3, 0.8]}
+          color="#ffd54f"
+        />
 
-<mesh>
+        {/* base crystal */}
 
-<octahedronGeometry
-args={[
-2.2
-]}
- />
+        <mesh position={[0, -1.6, 0]} rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[0.8, 1, 4]} />
 
-<meshBasicMaterial
-transparent
-opacity={0.04}
-color="#ffca28"
-wireframe
-/>
+          <meshStandardMaterial
+            color="#ffca28"
+            emissive="#ffca28"
+            emissiveIntensity={2}
+          />
+        </mesh>
 
-</mesh>
+        {/* energy particles */}
 
-
-{/* left shard */}
-
-<CrystalShard
-position={[
--.55,
-0,
-0
-]}
-rotation={[
-0,
-0,
-0.5
-]}
-scale={[
-0.8,
-1.2,
-0.8
-]}
-color="#ff9800"
-/>
-
-
-{/* center shard */}
-
-<CrystalShard
-position={[
-0,
-0.4,
-0
-]}
-rotation={[
-0,
-0,
-0
-]}
-scale={[
-1,
-1.5,
-1
-]}
-color="#ffb300"
-/>
-
-
-{/* right shard */}
-
-<CrystalShard
-position={[
-.65,
--.1,
-0
-]}
-rotation={[
-0,
-0,
--.45
-]}
-scale={[
-0.8,
-1.3,
-0.8
-]}
-color="#ffd54f"
-/>
-
-
-{/* base crystal */}
-
-<mesh
-position={[
-0,
--1.6,
-0
-]}
-rotation={[
-Math.PI,
-0,
-0
-]}
->
-
-<coneGeometry
-args={[
-0.8,
-1,
-4
-]}
-/>
-
-<meshStandardMaterial
-color="#ffca28"
-emissive="#ffca28"
-emissiveIntensity={2}
-/>
-
-</mesh>
-
-
-{/* energy particles */}
-
-{particles.map(
-(_,i)=>(
-
-<Particle
-key={i}
-angle={
-(i/8)*
-Math.PI*2
-}
-/>
-
-)
-)}
-
-</Float>
-
-</group>
-
-)
-
+        {particles.map((_, i) => (
+          <Particle key={i} angle={(i / 8) * Math.PI * 2} />
+        ))}
+      </Float>
+    </group>
+  );
 }

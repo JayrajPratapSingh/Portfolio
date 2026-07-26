@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function Anzo() {
   return (
-    <section className="relative min-h-screen bg-white flex items-center justify-center overflow-hidden px-4">
+    <section className="home-frame-section relative min-h-screen bg-white flex items-center justify-center overflow-hidden px-4">
 
       {/* background lines */}
       <div className="absolute top-[30%] h-[2px] w-2/3 bg-black" />

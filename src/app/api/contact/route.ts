@@ -1,9 +1,7 @@
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
-
-const resend = new Resend(
-  process.env.RESEND_API_KEY
-);
+import dbConnect from "@/lib/db";
+import ContactMessage from "@/models/ContactMessage";
 
 export async function POST(req: Request) {
   try {
@@ -29,7 +27,13 @@ export async function POST(req: Request) {
         }
       );
     }
+    if (typeof email !== "string" || !/^\S+@\S+\.\S+$/.test(email) || message.length > 5000) return NextResponse.json({ message: "Please provide a valid email and message" }, { status: 422 });
+    try { await dbConnect(); await ContactMessage.create({ name, email, message }); } catch { /* Email delivery can still proceed when storage is unavailable. */ }
 
+    const apiKey = process.env.RESEND_API_KEY;
+    const receiver = process.env.CONTACT_RECEIVER;
+    if (!apiKey || !receiver) return NextResponse.json({ success: true, preview: true });
+    const resend = new Resend(apiKey);
     // Mail to YOU
 
     await resend.emails.send({
@@ -37,7 +41,7 @@ export async function POST(req: Request) {
       "Portfolio <onboarding@resend.dev>",
 
       to:
-      process.env.CONTACT_RECEIVER!,
+      receiver,
 
       replyTo:
       email,

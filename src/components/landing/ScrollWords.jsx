@@ -13,7 +13,7 @@ const items = [
 
 export default function ScrollWords() {
   return (
-    <section className="relative overflow-hidden bg-black py-28 text-white md:py-40">
+    <section className="home-words-section relative overflow-hidden bg-black py-28 text-white md:py-40">
 
       <div className="mx-auto max-w-6xl px-5 md:px-6">
 

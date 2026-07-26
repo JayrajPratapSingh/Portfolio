@@ -382,7 +382,7 @@ export default function AboutPage() {
   return (
     <main
       className="
-      relative
+      about-page relative
       overflow-hidden
       bg-black
       text-white

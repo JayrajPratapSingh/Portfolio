@@ -3,7 +3,6 @@
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/all";
-import { Bebas_Neue } from "next/font/google";
 gsap.registerPlugin(ScrollTrigger);
 
 const words = [
@@ -16,10 +15,6 @@ const words = [
 ];
  
 
-const bebas = Bebas_Neue({
- subsets: ["latin"],
- weight: "400",
- });
 export default function DesignMatters() {
 
   useGSAP(() => {
@@ -44,7 +39,7 @@ export default function DesignMatters() {
   return (
     <section
       id="section2"
-      className="bg-white text-center py-20 text-black"
+      className="home-design-section bg-white text-center py-20 text-black"
       style={{
         perspective: "1000px",
       }}
@@ -56,7 +51,7 @@ export default function DesignMatters() {
         >
           <h1
             className={`
-            ${bebas.className}
+            font-[Impact,Haettenschweiler,'Arial_Narrow_Bold',sans-serif]
             text-[22vw]
             leading-[18vw]
             font-black
