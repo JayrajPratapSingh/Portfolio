@@ -5,10 +5,11 @@ import Anzo from "../landing/Anzo";
 import Future from "../landing/Future";
 import ThreeJS from "../landing/ThreeJS";
 import DevSolarSection from "../landing/DevSolarSection";
-export default function Home() {
+import type { HeroContent } from "@/types";
+export default function Home({ heroContent }: { heroContent?: HeroContent }) {
   return (
     <>
-    <Intro/>
+    <Intro content={heroContent} />
     <DevSolarSection />
     <ThreeJS />
     <DesignMatters />

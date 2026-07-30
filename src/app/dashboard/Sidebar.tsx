@@ -5,52 +5,34 @@ import { usePathname } from "next/navigation";
 
 import {
   LayoutDashboard,
+  Sparkles,
   User,
   FolderKanban,
-  Code2,
-  Briefcase,
-  FileText,
-  MessageSquare,
+  Share2,
+  Search,
+  Settings,
   LogOut,
 } from "lucide-react";
 
 const menuItems = [
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "About",
-    href: "/dashboard/about",
-    icon: User,
-  },
-  {
-    title: "Projects",
-    href: "/dashboard/projects",
-    icon: FolderKanban,
-  },
-  {
-    title: "Skills",
-    href: "/dashboard/skills",
-    icon: Code2,
-  },
-  {
-    title: "Experience",
-    href: "/dashboard/experience",
-    icon: Briefcase,
-  },
-  {
-    title: "Resume",
-    href: "/dashboard/resume",
-    icon: FileText,
-  },
-  {
-    title: "Messages",
-    href: "/dashboard/messages",
-    icon: MessageSquare,
-  },
+  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Hero", href: "/dashboard/hero", icon: Sparkles },
+  { title: "About", href: "/dashboard/about", icon: User },
+  { title: "Projects", href: "/dashboard/projects", icon: FolderKanban },
+  { title: "Social Links", href: "/dashboard/social", icon: Share2 },
+  { title: "SEO", href: "/dashboard/seo", icon: Search },
+  { title: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
+
+const handleLogout = async () => {
+  try {
+    await fetch("/api/logout", { method: "POST" });
+  } catch {
+    /* ignore — redirect regardless */
+  }
+  localStorage.removeItem("token");
+  window.location.href = "/admin/login";
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -131,6 +113,7 @@ export default function Sidebar() {
             transition-all
             hover:bg-red-500/10
           "
+          onClick ={handleLogout}
         >
           <LogOut size={20} />
           Logout

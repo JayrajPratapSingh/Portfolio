@@ -1,60 +1,56 @@
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
+
 import dns from "dns";
-
-dns.setServers([
-  "8.8.8.8",
-  "1.1.1.1",
-]);
-
+// Some ISPs/local resolvers can't resolve MongoDB Atlas SRV records — force
+// public DNS so `mongodb+srv://` connection strings resolve reliably.
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
-console.log("MONGODB_URI:", MONGODB_URI)
-if (!MONGODB_URI) {
-  throw new Error("MONGODB_URI missing");
+
+/**
+ * Cached Mongoose connection.
+ * Next.js dev/serverless re-imports modules and would otherwise open a new
+ * connection on every request. We cache the connection (and the in-flight
+ * promise) on the global object so it's reused across invocations.
+ */
+interface MongooseCache {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
 }
 
-let cached = (global as any).mongoose;
+const globalWithMongoose = global as typeof globalThis & {
+  _mongoose?: MongooseCache;
+};
 
-if (!cached) {
-  cached = (global as any).mongoose = {
-    conn: null,
-    promise: null,
-  };
-}
+const cached: MongooseCache =
+  globalWithMongoose._mongoose ?? { conn: null, promise: null };
+globalWithMongoose._mongoose = cached;
 
-async function dbConnect() {
-  try {
-    if (cached.conn) {
-      return cached.conn;
-    }
-
-    if (!cached.promise) {
-      cached.promise = mongoose
-        .connect(MONGODB_URI)
-        .then((mongoose) => {
-          console.log("✅ Mongo Connected");
-          return mongoose;
-        })
-        .catch((err) => {
-          console.error("❌ Mongo Connection Failed");
-          console.error(err);
-
-          cached.promise = null;
-
-          throw err;
-        });
-    }
-
-    cached.conn = await cached.promise;
-
-    return cached.conn;
-  } catch (error) {
-    console.error("❌ DB Connect Error:", error);
-    throw error;
+async function dbConnect(): Promise<typeof mongoose> {
+  if (!MONGODB_URI) {
+    throw new Error(
+      "MONGODB_URI not found. Define it in .env.local before connecting.",
+    );
   }
+  if (cached.conn) return cached.conn;
+
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(MONGODB_URI, {
+      bufferCommands: false,
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (err) {
+    cached.promise = null;
+    throw err;
+  }
+
+  return cached.conn;
 }
 
 export default dbConnect;

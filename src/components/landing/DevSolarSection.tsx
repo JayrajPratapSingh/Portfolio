@@ -3,7 +3,6 @@
 import { Canvas, useFrame } from "@react-three/fiber";
 
 import {
-  OrbitControls,
   Float,
   Stars,
   Billboard,
@@ -11,8 +10,16 @@ import {
 } from "@react-three/drei";
 
 import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
 
-import { Fragment, useRef } from "react";
+import { Fragment, useRef, useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { cn } from "@/lib/cn";
+
+// Light-mode "smart city" replaces the solar system (lazy, client-only).
+const HeroCityScene = dynamic(() => import("./hero/HeroCityScene"), {
+  ssr: false,
+});
 
 import ReactCore from "./ReactCore";
 import NodeJSCore from "./NodeJSCore";
@@ -185,74 +192,84 @@ function Scene() {
           />
         </Fragment>
       ))}
-
-      <OrbitControls
-        enableZoom={false}
-        autoRotate
-        autoRotateSpeed={0.2}
-      />
     </>
   );
 }
 
 export default function DevSolarSection() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isLight = mounted && resolvedTheme === "light";
+
   return (
     <section
-      className="
-      relative
-      h-screen
-      overflow-hidden
-      bg-black
-      text-white
-    "
+      className={cn(
+        "relative h-screen overflow-hidden",
+        isLight ? "bg-[#dbeafe] text-slate-900" : "bg-black text-white",
+      )}
     >
-      {/* canvas only inside this section */}
-
-      <div className="absolute inset-0">
-        <Canvas
-          camera={{
-            position: [0, 3, 20],
-            fov: 42,
-          }}
-        >
-          <Scene />
-        </Canvas>
+      {/* 3D — night: tech solar system · day: smart flying city.
+          pointer-events-none + touch-action:pan-y so mobile always scrolls. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ touchAction: "pan-y" }}
+      >
+        {isLight ? (
+          <HeroCityScene />
+        ) : (
+          <Canvas camera={{ position: [0, 3, 20], fov: 42 }}>
+            <Scene />
+          </Canvas>
+        )}
       </div>
 
-      {/* dark overlay */}
-
-      <div className="absolute inset-0 bg-black/40 z-[1]" />
-
-      {/* grid */}
-
+      {/* overlay + grid */}
       <div
-        className="
-        absolute
-        inset-0
-        z-[1]
-        opacity-[0.04]
-        bg-[linear-gradient(rgba(255,255,255,.15)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.15)_1px,transparent_1px)]
-        bg-[size:42px_42px]
-      "
+        className={cn(
+          "absolute inset-0 z-[1]",
+          isLight ? "bg-white/10" : "bg-black/40",
+        )}
+      />
+      <div
+        className={cn(
+          "absolute inset-0 z-[1] bg-[size:42px_42px]",
+          isLight
+            ? "opacity-[0.06] bg-[linear-gradient(rgba(99,102,241,.4)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,.4)_1px,transparent_1px)]"
+            : "opacity-[0.04] bg-[linear-gradient(rgba(255,255,255,.15)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.15)_1px,transparent_1px)]",
+        )}
       />
 
-   
+      {/* heading */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-6 pt-24 text-center md:px-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+        >
+          <span
+            className={cn(
+              "text-xs uppercase tracking-[0.35em]",
+              isLight ? "text-indigo-600" : "text-cyan-300",
+            )}
+          >
+            {isLight ? "Systems, visualized" : "The tech universe"}
+          </span>
+          <h2 className="mx-auto mt-3 max-w-3xl text-3xl font-black leading-tight md:text-5xl">
+            {isLight
+              ? "A connected city of technologies I build with."
+              : "An orbiting system of the stacks I engineer."}
+          </h2>
+        </motion.div>
+      </div>
 
-
-      {/* fade bottom */}
-
+      {/* fade bottom into next section */}
       <div
-        className="
-        absolute
-        bottom-0
-        left-0
-        right-0
-        h-40
-        bg-gradient-to-t
-        from-black
-        to-transparent
-        z-10
-      "
+        className={cn(
+          "absolute bottom-0 left-0 right-0 z-10 h-40 bg-gradient-to-t to-transparent",
+          isLight ? "from-[#dbeafe]" : "from-black",
+        )}
       />
     </section>
   );

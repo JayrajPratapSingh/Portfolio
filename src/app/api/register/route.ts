@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
+import { getAuthUser } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
+    // Registration is admin-only — the first admin is created via `npm run seed`.
+    const auth = await getAuthUser();
+    if (!auth) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     const { email, password } = await req.json();
 
      await dbConnect();

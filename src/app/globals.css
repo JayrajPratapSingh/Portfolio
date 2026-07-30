@@ -1,40 +1,135 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------ */
+/*  THEME STRATEGY                                                     */
+/*  next-themes sets class="dark" | "light" on <html>. We drive the    */
+/*  Tailwind `dark:` variant off that class instead of the OS pref.    */
+/* ------------------------------------------------------------------ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ================================================================== */
+/*  LIGHT MODE  ·  "New Universe"                                      */
+/*  Soft, glassy, layered. Indigo / sky / lavender. NOT inverted dark. */
+/* ================================================================== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f6fb;          /* soft off-white canvas            */
+  --foreground: #0f172a;          /* slate ink                        */
+
+  --surface: #ffffff;             /* raised cards / panels            */
+  --surface-2: #eef1fb;           /* recessed / subtle fills          */
+  --muted: #64748b;               /* secondary text                   */
+  --border: rgba(15, 23, 42, 0.08);
+
+  --accent: #6366f1;              /* indigo   — primary               */
+  --accent-2: #38bdf8;            /* sky      — secondary             */
+  --accent-3: #a78bfa;            /* lavender — tertiary              */
+  --accent-emerald: #10b981;      /* emerald  — success / status      */
+
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.7);
+  --ring: rgba(99, 102, 241, 0.45);
+
+  --shadow-soft: 0 10px 30px -12px rgba(79, 70, 229, 0.25);
 }
 
+/* ================================================================== */
+/*  DARK MODE  ·  "Evolution"  (preserved cosmic identity)            */
+/*  Black + cyan + purple. Refined, not replaced.                     */
+/* ================================================================== */
+.dark {
+  --background: #000000;
+  --foreground: #ededed;
+
+  --surface: #0a0a0a;
+  --surface-2: #111114;
+  --muted: #a1a1aa;
+  --border: rgba(255, 255, 255, 0.08);
+
+  --accent: #22d3ee;              /* cyan   — signature               */
+  --accent-2: #a855f7;            /* purple — signature               */
+  --accent-3: #3b82f6;            /* blue                             */
+  --accent-emerald: #34d399;
+
+  --glass-bg: rgba(10, 10, 12, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --ring: rgba(34, 211, 238, 0.5);
+
+  --shadow-soft: 0 0 40px rgba(34, 211, 238, 0.12);
+}
+
+/* Expose tokens as Tailwind color/font utilities (bg-background, etc.) */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --color-accent-emerald: var(--accent-emerald);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ------------------------------------------------------------------ */
+/*  BASE                                                              */
+/* ------------------------------------------------------------------ */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 1400px;
+}
+
+/* Accessibility: honour reduced-motion globally (page-wide baseline). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-
-
-body{
-background:black;
-overflow-x:hidden;
+/* ------------------------------------------------------------------ */
+/*  DASHBOARD (admin CMS) form controls                               */
+/* ------------------------------------------------------------------ */
+.input,
+.textarea {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.75rem 1rem;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input::placeholder,
+.textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+.input:focus,
+.textarea:focus {
+  border-color: rgba(34, 211, 238, 0.6);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
 }
 
-.container{
-max-width:1400px;
-}
-
+/* ------------------------------------------------------------------ */
+/*  KEYFRAMES (existing — preserved)                                  */
+/* ------------------------------------------------------------------ */
 @keyframes beam {
   0% {
     transform: translateX(-250%) rotate(12deg);
   }
-
   100% {
     transform: translateX(700%) rotate(12deg);
   }

@@ -9,9 +9,15 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-[#030712] text-white">
       <Sidebar />
 
-      <main className="ml-72 min-h-screen p-8">
-        {children}
-      </main>
+      <div className="ml-72">
+    {/* <Topbar /> */}
+
+    <main className="p-8">
+     <div className="max-w-5xl mx-auto">
+    {children}
+  </div>
+    </main>
+  </div>
     </div>
   );
 }
