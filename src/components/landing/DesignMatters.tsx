@@ -3,7 +3,7 @@
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/all";
-import { Bebas_Neue } from "next/font/google";
+import { Anton } from "next/font/google";
 gsap.registerPlugin(ScrollTrigger);
 
 const words = [
@@ -14,12 +14,12 @@ const words = [
   "THAT",
   "MATTERS",
 ];
- 
 
-const bebas = Bebas_Neue({
- subsets: ["latin"],
- weight: "400",
- });
+// heavier, bolder display face than Bebas — tightened below
+const anton = Anton({
+  subsets: ["latin"],
+  weight: "400",
+});
 export default function DesignMatters() {
 
   useGSAP(() => {
@@ -44,24 +44,22 @@ export default function DesignMatters() {
   return (
     <section
       id="section2"
-      className="bg-white text-center py-20 text-black"
+      className="bg-white py-20 text-center text-black dark:bg-[#04010f] dark:text-white"
       style={{
         perspective: "1000px",
       }}
     >
       {words.map((word) => (
-        <div
-          key={word}
-          className="flipText overflow-hidden"
-        >
+        <div key={word} className="flipText">
           <h1
             className={`
-            ${bebas.className}
+            ${anton.className}
             text-[22vw]
-            leading-[18vw]
+            leading-[0.9]
             font-black
             uppercase
             `}
+            style={{ letterSpacing: "-0.035em" }}
           >
             {word}
           </h1>
@@ -74,6 +72,7 @@ export default function DesignMatters() {
           preserveAspectRatio="xMidYMid meet"
           data-bbox="4 0 2028.339 83"
           xmlns="http://www.w3.org/2000/svg"
+          className="[&_path]:fill-current"
           viewBox="0 0 2037 91"
           height="91"
           width="2037"
@@ -513,7 +512,7 @@ export default function DesignMatters() {
         </svg>
       </div>
 
-      <div className="h-[2px] w-1/3 bg-black mx-auto mt-16" />
+      <div className="mx-auto mt-16 h-[2px] w-1/3 bg-black dark:bg-white" />
     </section>
   );
 }

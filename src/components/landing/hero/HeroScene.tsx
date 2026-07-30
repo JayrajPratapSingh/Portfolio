@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 
 // R3F scenes are client-only and lazy — never block first paint or SSR.
 const HeroGalaxyScene = dynamic(() => import("./HeroGalaxyScene"), { ssr: false }); // night
-const HeroDreamScene = dynamic(() => import("./HeroDreamScene"), { ssr: false }); // day
+const HeroChromeScene = dynamic(() => import("./HeroChromeScene"), { ssr: false }); // day
 
 /**
  * Theme-swapped Hero backdrop:
@@ -31,7 +31,7 @@ export default function HeroScene({
       {reduced ? (
         <StaticFallback isLight={isLight} />
       ) : isLight ? (
-        <HeroDreamScene />
+        <HeroChromeScene />
       ) : (
         <HeroGalaxyScene />
       )}

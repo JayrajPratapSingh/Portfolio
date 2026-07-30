@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
 import {
   FaGithub,
   FaLinkedin,
@@ -13,6 +16,10 @@ import { navItems } from "@/data/nav";
 import { socials } from "@/data/social";
 import { cn } from "@/lib/cn";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+
+const FooterBackground = dynamic(() => import("./FooterBackground"), {
+  ssr: false,
+});
 
 const socialIcons = {
   github: <FaGithub />,
@@ -35,6 +42,10 @@ const builtWith = ["Next.js 16", "Tailwind v4", "Framer Motion", "R3F", "GSAP"];
 
 export default function Footer() {
   const reduced = useReducedMotion();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isLight = mounted && resolvedTheme === "light";
   const year = new Date().getFullYear();
 
   const reveal = (delay = 0) =>
@@ -48,14 +59,15 @@ export default function Footer() {
         };
 
   return (
-    <footer className="relative overflow-hidden border-t border-[var(--border)] bg-[var(--surface)] px-6 pb-10 pt-20 text-foreground md:px-16 dark:bg-[#05060a]">
-      {/* animated backdrop */}
+    <footer className="relative overflow-hidden border-t border-[var(--border)] bg-[var(--surface)] px-6 pb-10 pt-20 text-foreground md:px-16 dark:bg-[#04010f]">
+      {/* animated 3D backdrop */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        {/* light: aurora · dark: cosmic glow */}
+        {mounted && <FooterBackground isLight={isLight} />}
+        {/* colour glows over the wave */}
         <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-indigo-400/20 blur-[120px] dark:bg-cyan-500/10" />
         <div className="absolute -right-24 top-10 h-96 w-96 rounded-full bg-sky-300/20 blur-[120px] dark:bg-purple-500/10" />
-        {/* starfield / grid */}
-        <div className="absolute inset-0 opacity-[0.4] bg-[radial-gradient(circle_at_1px_1px,rgba(99,102,241,0.15)_1px,transparent_0)] bg-[size:26px_26px] [mask-image:radial-gradient(120%_100%_at_50%_0%,black,transparent)] dark:bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.12)_1px,transparent_0)]" />
+        {/* readability veil so content stays crisp over the 3D */}
+        <div className="absolute inset-0 bg-white/25 dark:bg-[#04010f]/45" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl">

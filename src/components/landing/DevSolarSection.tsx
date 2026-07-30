@@ -7,12 +7,15 @@ import {
   Stars,
   Billboard,
   Text,
+  Instances,
+  Instance,
 } from "@react-three/drei";
 
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
+import * as THREE from "three";
 
-import { Fragment, useRef, useState, useEffect } from "react";
+import { Fragment, useRef, useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/cn";
 
@@ -135,12 +138,126 @@ function TechPlanet({ name, angle, radius }: any) {
   );
 }
 
+/* Additive glow shells behind the central core → a glowing star */
+function SunGlow() {
+  return (
+    <group>
+      {[
+        { r: 2.4, c: "#22d3ee", o: 0.16 },
+        { r: 3.6, c: "#3b82f6", o: 0.1 },
+        { r: 4.8, c: "#a855f7", o: 0.06 },
+      ].map((s, i) => (
+        <mesh key={i}>
+          <sphereGeometry args={[s.r, 32, 32]} />
+          <meshBasicMaterial
+            color={s.c}
+            transparent
+            opacity={s.o}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/* Slowly drifting asteroid belt (instanced rocks) */
+function AsteroidBelt() {
+  const ref = useRef<THREE.Group>(null);
+  const rocks = useMemo(
+    () =>
+      Array.from({ length: 150 }).map(() => {
+        const a = Math.random() * Math.PI * 2;
+        const r = 17 + Math.random() * 2.6;
+        return {
+          pos: [Math.cos(a) * r, (Math.random() - 0.5) * 0.7, Math.sin(a) * r] as [
+            number,
+            number,
+            number,
+          ],
+          s: 0.05 + Math.random() * 0.13,
+          rot: [Math.random() * 3, Math.random() * 3, Math.random() * 3] as [
+            number,
+            number,
+            number,
+          ],
+        };
+      }),
+    [],
+  );
+  useFrame((_, dt) => {
+    if (ref.current) ref.current.rotation.y += dt * 0.02;
+  });
+  return (
+    <group ref={ref}>
+      <Instances limit={rocks.length}>
+        <dodecahedronGeometry args={[1, 0]} />
+        <meshStandardMaterial color="#64748b" roughness={0.9} flatShading />
+        {rocks.map((rk, i) => (
+          <Instance key={i} position={rk.pos} scale={rk.s} rotation={rk.rot} />
+        ))}
+      </Instances>
+    </group>
+  );
+}
+
+/* Distant ringed gas-giant for a deep-space vista */
+function DistantPlanet() {
+  return (
+    <group position={[-20, 7, -30]} rotation={[0.3, 0, 0.4]}>
+      <mesh>
+        <sphereGeometry args={[4, 48, 48]} />
+        <meshStandardMaterial
+          color="#6d5bd0"
+          roughness={0.7}
+          metalness={0.1}
+          emissive="#3b2f6b"
+          emissiveIntensity={0.25}
+        />
+      </mesh>
+      <mesh rotation={[Math.PI / 2.2, 0, 0]}>
+        <ringGeometry args={[5.5, 7.6, 64]} />
+        <meshBasicMaterial color="#c4b5fd" transparent opacity={0.4} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+}
+
+/* Faint additive nebula clouds for depth */
+function Nebula() {
+  return (
+    <>
+      <mesh position={[14, -4, -22]}>
+        <sphereGeometry args={[11, 24, 24]} />
+        <meshBasicMaterial
+          color="#1e3a8a"
+          transparent
+          opacity={0.08}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh position={[-16, 6, -18]}>
+        <sphereGeometry args={[9, 24, 24]} />
+        <meshBasicMaterial
+          color="#6d28d9"
+          transparent
+          opacity={0.07}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+    </>
+  );
+}
+
 function Scene() {
   return (
     <>
-      <color attach="background" args={["#020617"]} />
+      <color attach="background" args={["#04010f"]} />
 
-      <fog attach="fog" args={["#020617", 15, 60]} />
+      <fog attach="fog" args={["#04010f", 15, 60]} />
 
       <ambientLight intensity={1.5} />
 
@@ -155,13 +272,12 @@ function Scene() {
         intensity={10}
       />
 
-      <Stars
-        radius={180}
-        depth={80}
-        count={12000}
-        factor={4}
-        fade
-      />
+      <Stars radius={220} depth={90} count={9000} factor={4} fade />
+
+      <Nebula />
+      <DistantPlanet />
+      <SunGlow />
+      <AsteroidBelt />
 
       {/* center */}
 
@@ -206,7 +322,7 @@ export default function DevSolarSection() {
     <section
       className={cn(
         "relative h-screen overflow-hidden",
-        isLight ? "bg-[#dbeafe] text-slate-900" : "bg-black text-white",
+        isLight ? "bg-[#dbeafe] text-slate-900" : "bg-[#04010f] text-white",
       )}
     >
       {/* 3D — night: tech solar system · day: smart flying city.
@@ -268,7 +384,7 @@ export default function DevSolarSection() {
       <div
         className={cn(
           "absolute bottom-0 left-0 right-0 z-10 h-40 bg-gradient-to-t to-transparent",
-          isLight ? "from-[#dbeafe]" : "from-black",
+          isLight ? "from-[#dbeafe]" : "from-[#04010f]",
         )}
       />
     </section>

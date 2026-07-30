@@ -37,7 +37,8 @@
 /*  Black + cyan + purple. Refined, not replaced.                     */
 /* ================================================================== */
 .dark {
-  --background: #000000;
+  /* unified night base (blends sections page-to-page) */
+  --background: #04010f;
   --foreground: #ededed;
 
   --surface: #0a0a0a;

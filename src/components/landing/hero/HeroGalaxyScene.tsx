@@ -102,8 +102,8 @@ export default function HeroGalaxyScene() {
       dpr={[1, 1.6]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
     >
-      <color attach="background" args={["#01010a"]} />
-      <fog attach="fog" args={["#01010a", 8, 20]} />
+      <color attach="background" args={["#04010f"]} />
+      <fog attach="fog" args={["#04010f", 8, 20]} />
       <Stars radius={90} depth={50} count={2500} factor={4} fade speed={0.4} />
       <group position={[2.2, -0.2, 0]} rotation={[0.5, 0, 0]}>
         <Galaxy />
