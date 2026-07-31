@@ -125,6 +125,68 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
+/*  GLASS 3D BUTTON — glossy translucent sheen + raised depth + press  */
+/* ------------------------------------------------------------------ */
+.btn-3d {
+  position: relative;
+  transform: translateZ(0);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 5px 0 rgba(30, 27, 75, 0.35),
+    0 12px 26px -8px rgba(79, 70, 229, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -7px 14px rgba(0, 0, 0, 0.14);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+/* glossy top highlight sweep */
+.btn-3d::before {
+  content: "";
+  position: absolute;
+  inset: 1px 1px 45% 1px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+.btn-3d:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 7px 0 rgba(30, 27, 75, 0.35),
+    0 18px 34px -8px rgba(79, 70, 229, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -7px 14px rgba(0, 0, 0, 0.14);
+}
+.btn-3d:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 2px 0 rgba(30, 27, 75, 0.35),
+    0 6px 14px -8px rgba(79, 70, 229, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.16);
+}
+.dark .btn-3d {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 5px 0 rgba(0, 0, 0, 0.5),
+    0 12px 28px -8px rgba(34, 211, 238, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -7px 14px rgba(0, 0, 0, 0.28);
+}
+.dark .btn-3d:hover {
+  box-shadow:
+    0 7px 0 rgba(0, 0, 0, 0.5),
+    0 18px 36px -8px rgba(34, 211, 238, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -7px 14px rgba(0, 0, 0, 0.28);
+}
+.dark .btn-3d:active {
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.5),
+    0 6px 14px -8px rgba(34, 211, 238, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* ------------------------------------------------------------------ */
 /*  LENIS smooth scroll                                                */
 /* ------------------------------------------------------------------ */
 html.lenis,
@@ -154,4 +216,19 @@ html.lenis body {
   100% {
     transform: translateX(700%) rotate(12deg);
   }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+}
+.marquee-group:hover .animate-marquee {
+  animation-play-state: paused;
 }

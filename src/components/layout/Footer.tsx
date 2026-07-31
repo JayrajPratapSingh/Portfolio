@@ -99,8 +99,7 @@ export default function Footer() {
           <Link
             href="/hire-me"
             className={cn(
-              "group inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition-transform hover:-translate-y-0.5",
-              "text-white shadow-[var(--shadow-soft)]",
+              "btn-3d group inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold text-white",
               "bg-gradient-to-r from-indigo-500 to-violet-500 dark:from-cyan-400 dark:to-cyan-300 dark:text-black",
             )}
           >

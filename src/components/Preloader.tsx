@@ -1,18 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 /**
- * Minimal, premium boot sequence: a softly-lit logo mark, the name revealing
- * letter by letter, and a slim determinate progress bar — then a clean fade
- * reveal. Bulletproof dismissal (fixed timeout, not coupled to the animation),
- * click-to-skip, and instant-skip under reduced-motion.
+ * A frontend-developer boot log. A small terminal types out a realistic dev
+ * build sequence tied to load progress, then fades away — no cinematic reveal.
+ * Bulletproof dismissal (fixed timeout), click-to-skip, reduced-motion skip.
  */
-const NAME = "JAYRAJ";
-const ease = [0.22, 1, 0.36, 1] as const;
+type Line = { at: number; kind: "cmd" | "info" | "ok"; text: string };
+
+const LINES: Line[] = [
+  { at: 0, kind: "cmd", text: "npm run dev" },
+  { at: 18, kind: "info", text: "▲ Next.js 16 · Turbopack" },
+  { at: 40, kind: "ok", text: "compiled client and server successfully" },
+  { at: 62, kind: "ok", text: "mounting 3D universe · shaders ready" },
+  { at: 84, kind: "ok", text: "hydration complete" },
+  { at: 100, kind: "info", text: "ready — launching portfolio ✦" },
+];
 
 export default function Preloader() {
   const reduced = useReducedMotion();
@@ -33,9 +39,9 @@ export default function Preloader() {
     document.body.style.overflow = "hidden";
     const iv = setInterval(
       () => setProgress((p) => Math.min(100, p + Math.floor(Math.random() * 7) + 3)),
-      110,
+      120,
     );
-    const dismiss = setTimeout(() => setDone(true), 2400);
+    const dismiss = setTimeout(() => setDone(true), 2500);
     return () => {
       clearInterval(iv);
       clearTimeout(dismiss);
@@ -47,96 +53,92 @@ export default function Preloader() {
     if (done) unlock();
   }, [done]);
 
+  const visible = LINES.filter((l) => progress >= l.at);
+  const bg = "radial-gradient(120% 120% at 50% 20%, #0b1020 0%, #060913 55%, #030509 100%)";
+  const reveal = { duration: 0.8, ease: [0.76, 0, 0.24, 1] as const };
+
   return (
     <AnimatePresence>
       {!done && (
         <motion.div
           key="loader"
-          exit={{ opacity: 0, transition: { duration: 0.6, ease } }}
           onClick={() => setDone(true)}
-          className="fixed inset-0 z-[9999] cursor-pointer overflow-hidden"
-          style={{ background: "radial-gradient(120% 120% at 50% 30%, #0b0620 0%, #05010f 60%, #020008 100%)" }}
+          className="fixed inset-0 z-[9999] grid cursor-pointer place-items-center overflow-hidden px-5"
         >
-          {/* faint aurora glows */}
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            <motion.div
-              animate={{ opacity: [0.3, 0.55, 0.3] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-500/15 blur-[110px]"
-            />
-            <motion.div
-              animate={{ opacity: [0.25, 0.5, 0.25] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-violet-500/15 blur-[110px]"
-            />
-          </div>
+          {/* curtain — two halves part from the centre to open the site */}
+          <motion.div
+            aria-hidden
+            exit={{ x: "-100%", transition: reveal }}
+            className="absolute inset-y-0 left-0 w-1/2"
+            style={{ background: bg, boxShadow: "24px 0 60px rgba(0,0,0,0.45)" }}
+          />
+          <motion.div
+            aria-hidden
+            exit={{ x: "100%", transition: reveal }}
+            className="absolute inset-y-0 right-0 w-1/2"
+            style={{ background: bg, boxShadow: "-24px 0 60px rgba(0,0,0,0.45)" }}
+          />
 
           <motion.div
-            exit={{ scale: 1.04, opacity: 0, transition: { duration: 0.5, ease } }}
-            className="absolute inset-0 grid place-items-center"
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.3 } }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-[#0a0e1a]/90 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] backdrop-blur-xl"
           >
-            <div className="flex w-[280px] max-w-[80vw] flex-col items-center">
-              {/* logo mark with a thin sweeping arc */}
-              <div className="relative grid h-24 w-24 place-items-center">
-                <motion.span
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background:
-                      "conic-gradient(from 0deg, transparent 0deg, rgba(34,211,238,0.9) 90deg, rgba(168,85,247,0.9) 180deg, transparent 260deg)",
-                    maskImage:
-                      "radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px))",
-                    WebkitMaskImage:
-                      "radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px))",
-                  }}
-                />
-                <motion.span
-                  initial={{ scale: 0.6, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.7, ease }}
-                  className="grid h-16 w-16 place-items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] shadow-[0_0_50px_rgba(34,211,238,0.25)] backdrop-blur-md"
-                >
-                  <Image src="/images/logo.png" alt="Jayraj" width={64} height={64} className="h-full w-full object-cover" />
-                </motion.span>
-              </div>
+            {/* title bar */}
+            <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+              <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+              <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
+              <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+              <span className="ml-3 font-mono text-xs text-white/40">~/jayraj-portfolio</span>
+            </div>
 
-              {/* name */}
-              <div className="mt-7 flex gap-[3px] text-lg font-bold tracking-[0.55em] text-white/90">
-                {NAME.split("").map((ch, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ y: 14, opacity: 0, filter: "blur(6px)" }}
-                    animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-                    transition={{ delay: 0.25 + i * 0.07, duration: 0.5, ease }}
+            {/* body */}
+            <div className="space-y-1.5 px-5 py-5 font-mono text-[13px] leading-relaxed">
+              {visible.map((l, i) => {
+                const last = i === visible.length - 1;
+                return (
+                  <motion.div
+                    key={l.text}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-start gap-2"
                   >
-                    {ch}
-                  </motion.span>
-                ))}
-              </div>
+                    {l.kind === "cmd" ? (
+                      <span className="text-emerald-400">$</span>
+                    ) : l.kind === "ok" ? (
+                      <span className="text-emerald-400">✓</span>
+                    ) : (
+                      <span className="text-cyan-400">›</span>
+                    )}
+                    <span className={l.kind === "cmd" ? "text-white" : "text-white/70"}>
+                      {l.text}
+                      {last && progress < 100 && (
+                        <motion.span
+                          animate={{ opacity: [1, 0, 1] }}
+                          transition={{ duration: 0.9, repeat: Infinity }}
+                          className="ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 bg-cyan-400"
+                        />
+                      )}
+                    </span>
+                  </motion.div>
+                );
+              })}
 
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-                className="mt-2 text-[10px] uppercase tracking-[0.35em] text-white/40"
-              >
-                Full Stack Engineer
-              </motion.p>
-
-              {/* slim progress */}
-              <div className="mt-7 h-[3px] w-full overflow-hidden rounded-full bg-white/10">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${progress}%`,
-                    background: "linear-gradient(90deg, #22d3ee, #6366f1, #a855f7)",
-                  }}
-                  transition={{ ease: "linear" }}
-                />
-              </div>
-              <div className="mt-2 w-full text-right font-mono text-[10px] text-white/40">
-                {progress}%
+              {/* progress */}
+              <div className="mt-4 flex items-center gap-3">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full transition-[width] duration-150 ease-out"
+                    style={{
+                      width: `${progress}%`,
+                      background: "linear-gradient(90deg, #22d3ee, #6366f1, #a855f7)",
+                    }}
+                  />
+                </div>
+                <span className="w-9 text-right text-xs text-white/50">{progress}%</span>
               </div>
             </div>
           </motion.div>

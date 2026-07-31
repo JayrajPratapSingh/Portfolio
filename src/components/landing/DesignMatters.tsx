@@ -44,7 +44,7 @@ export default function DesignMatters() {
   return (
     <section
       id="section2"
-      className="bg-white py-20 text-center text-black dark:bg-[#04010f] dark:text-white"
+      className="bg-gradient-to-b from-background via-[#eaeefc] to-background py-20 text-center text-slate-900 dark:via-[#0a0a16] dark:text-white"
       style={{
         perspective: "1000px",
       }}

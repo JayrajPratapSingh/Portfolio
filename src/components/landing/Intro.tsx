@@ -126,11 +126,11 @@ export default function Intro({ content }: { content?: HeroContent }) {
           </motion.p>
 
           {/* interactive particle name (scatter on hover, re-forms on leave) */}
-          <div aria-hidden className="relative -ml-0.5 h-[74px] w-full max-w-xl md:h-[120px]">
+          <div aria-hidden className="relative -ml-1 h-[92px] w-full max-w-2xl md:h-[168px]">
             {reduced ? (
               <span
                 className={cn(
-                  "block bg-clip-text text-6xl font-black tracking-tight text-transparent md:text-8xl",
+                  "block bg-clip-text text-7xl font-black tracking-tight text-transparent md:text-9xl",
                   "bg-gradient-to-r from-fuchsia-500 via-indigo-500 to-sky-500",
                   "dark:from-cyan-300 dark:via-blue-400 dark:to-purple-400",
                 )}
@@ -197,11 +197,11 @@ export default function Intro({ content }: { content?: HeroContent }) {
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
                     primary
                       ? cn(
-                          "text-white shadow-[var(--shadow-soft)] hover:-translate-y-0.5",
+                          "btn-3d text-white",
                           "bg-gradient-to-r from-indigo-500 to-violet-500",
                           "dark:from-cyan-400 dark:to-cyan-300 dark:text-black",
                         )
-                      : "border border-[var(--border)] bg-[var(--glass-bg)] text-foreground/80 backdrop-blur hover:text-foreground",
+                      : "border border-[var(--border)] bg-[var(--glass-bg)] text-foreground/80 backdrop-blur transition-colors hover:text-foreground",
                   )}
                 >
                   {cta.label}

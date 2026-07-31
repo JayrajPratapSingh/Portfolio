@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 
 // R3F scenes are client-only and lazy — never block first paint or SSR.
 const HeroGalaxyScene = dynamic(() => import("./HeroGalaxyScene"), { ssr: false }); // night
-const HeroChromeScene = dynamic(() => import("./HeroChromeScene"), { ssr: false }); // day
+const HeroUnderwaterScene = dynamic(() => import("./HeroUnderwaterScene"), { ssr: false }); // day
 
 /**
  * Theme-swapped Hero backdrop:
@@ -31,7 +31,7 @@ export default function HeroScene({
       {reduced ? (
         <StaticFallback isLight={isLight} />
       ) : isLight ? (
-        <HeroChromeScene />
+        <HeroUnderwaterScene />
       ) : (
         <HeroGalaxyScene />
       )}
@@ -41,7 +41,7 @@ export default function HeroScene({
 
 function StaticFallback({ isLight }: { isLight: boolean }) {
   return isLight ? (
-    <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_70%_20%,#fde68a_0%,#c4b5fd_40%,#7dd3fc_75%,#dbeafe_100%)]" />
+    <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_0%,#dff6ff_0%,#8fd6ea_45%,#4ba3c7_100%)]" />
   ) : (
     <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_70%_20%,#0891b2_0%,#7c3aed_40%,#000010_80%)]" />
   );

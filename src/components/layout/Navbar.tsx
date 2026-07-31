@@ -115,8 +115,7 @@ export default function Navbar() {
               <Link
                 href="/hire-me"
                 className={cn(
-                  "rounded-full px-5 py-2 text-sm font-semibold transition-transform hover:-translate-y-0.5",
-                  "text-white shadow-[var(--shadow-soft)]",
+                  "btn-3d rounded-full px-5 py-2 text-sm font-semibold text-white",
                   "bg-gradient-to-r from-indigo-500 to-violet-500 dark:from-cyan-400 dark:to-cyan-300 dark:text-black",
                 )}
               >

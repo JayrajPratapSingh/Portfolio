@@ -32,7 +32,8 @@ import {
 import { cn } from "@/lib/cn";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { usePublicContent } from "@/hooks/usePublicContent";
-import ProjectsBackdrop from "@/components/projects/ProjectsBackdrop";
+import ParticleHeading from "@/components/landing/hero/ParticleHeading";
+import ProjectsScene from "@/components/projects/ProjectsScene";
 
 const glass =
   "border border-[var(--border)] bg-[var(--surface)]/70 backdrop-blur-xl dark:bg-white/[0.04]";
@@ -90,7 +91,7 @@ export default function ProjectsPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden text-foreground">
-      <ProjectsBackdrop />
+      <ProjectsScene />
 
       <div className="relative z-10 mx-auto max-w-7xl px-6 py-24 md:px-12">
         {/* HERO */}
@@ -106,11 +107,9 @@ export default function ProjectsPage() {
             </span>
           </span>
 
-          <h1 className="mt-8 text-6xl font-black uppercase leading-[0.9] tracking-tight md:text-8xl">
-            Project
-            <span className="block bg-gradient-to-r from-indigo-500 via-sky-500 to-violet-500 bg-clip-text text-transparent dark:from-cyan-300 dark:via-blue-400 dark:to-purple-400">
-              Universe
-            </span>
+          <h1 className="relative mt-8 h-[120px] w-full max-w-2xl md:h-[200px]">
+            <span className="sr-only">Project Universe</span>
+            <ParticleHeading lines={["PROJECT", "UNIVERSE"]} className="absolute inset-0" />
           </h1>
 
           <p className="mt-8 max-w-3xl text-lg leading-relaxed text-foreground/70 md:text-xl">
@@ -273,7 +272,7 @@ function FeaturedCard({
         <Link
           href={project.live}
           target="_blank"
-          className="group/btn inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 dark:from-cyan-400 dark:to-cyan-300 dark:text-black"
+          className="btn-3d group/btn inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 px-5 py-3 text-sm font-semibold text-white dark:from-cyan-400 dark:to-cyan-300 dark:text-black"
         >
           <Globe size={16} /> Live Demo
           <ExternalLink size={14} className="transition-transform group-hover/btn:translate-x-0.5" />

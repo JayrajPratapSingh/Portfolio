@@ -13,6 +13,7 @@ import ContactBackdrop from "@/components/contact/ContactBackdrop";
 import { socials, type SocialLink } from "@/data/social";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { usePublicContent } from "@/hooks/usePublicContent";
+import ParticleHeading from "@/components/landing/hero/ParticleHeading";
 import { cn } from "@/lib/cn";
 
 const ContactScene3D = dynamic(() => import("@/components/contact/ContactScene3D"), {
@@ -66,11 +67,9 @@ export default function ContactPage() {
             Available for work
           </span>
 
-          <h1 className="mt-6 text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
-            Let&apos;s build
-            <span className="block bg-gradient-to-r from-indigo-500 via-sky-500 to-violet-500 bg-clip-text text-transparent dark:from-cyan-300 dark:via-blue-400 dark:to-purple-400">
-              something great.
-            </span>
+          <h1 className="relative mt-6 h-[100px] w-full max-w-xl md:h-[150px]">
+            <span className="sr-only">Let&apos;s build something great.</span>
+            <ParticleHeading lines={["LET'S BUILD", "SOMETHING GREAT."]} className="absolute inset-0" />
           </h1>
 
           <p className="mt-6 max-w-md text-lg text-foreground/70">

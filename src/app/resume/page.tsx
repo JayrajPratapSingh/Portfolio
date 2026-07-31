@@ -226,10 +226,10 @@ function DownloadBtn({
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-0.5",
+        "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold",
         primary
-          ? "text-white shadow-[var(--shadow-soft)] bg-gradient-to-r from-indigo-500 to-violet-500 dark:from-cyan-400 dark:to-cyan-300 dark:text-black"
-          : cn("text-foreground/75 hover:text-foreground", glass),
+          ? "btn-3d text-white bg-gradient-to-r from-indigo-500 to-violet-500 dark:from-cyan-400 dark:to-cyan-300 dark:text-black"
+          : cn("transition-transform hover:-translate-y-0.5 text-foreground/75 hover:text-foreground", glass),
       )}
     >
       {children}

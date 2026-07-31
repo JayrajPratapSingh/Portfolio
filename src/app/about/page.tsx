@@ -20,7 +20,8 @@ import { about, type AboutContent, type ExpertiseKey } from "@/data/about";
 import { cn } from "@/lib/cn";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { usePublicContent } from "@/hooks/usePublicContent";
-import AboutBackdrop from "@/components/about/AboutBackdrop";
+import ParticleHeading from "@/components/landing/hero/ParticleHeading";
+import AboutScene from "@/components/about/AboutScene";
 
 const expertiseIcons: Record<ExpertiseKey, React.ReactNode> = {
   frontend: <Globe size={26} />,
@@ -49,7 +50,7 @@ export default function AboutPage() {
 
   return (
     <main className="relative overflow-hidden text-foreground">
-      <AboutBackdrop />
+      <AboutScene />
 
       <div className="relative z-10 mx-auto max-w-6xl px-6 md:px-10">
         {/* HERO */}
@@ -66,11 +67,11 @@ export default function AboutPage() {
               </span>
             </span>
 
-            <h1 className="text-6xl font-black leading-[0.9] tracking-tight md:text-8xl">
-              {content.firstName}
-              <span className="mt-2 block bg-gradient-to-r from-indigo-500 via-sky-500 to-violet-500 bg-clip-text text-transparent dark:from-cyan-300 dark:via-blue-400 dark:to-purple-400">
-                {content.lastName}
+            <h1 className="relative h-[140px] w-full max-w-2xl md:h-[220px]">
+              <span className="sr-only">
+                {content.firstName} {content.lastName}
               </span>
+              <ParticleHeading lines={[content.firstName, content.lastName]} className="absolute inset-0" />
             </h1>
 
             <p className="mt-8 max-w-xl text-lg leading-relaxed text-foreground/70 md:text-xl">
@@ -95,19 +96,27 @@ export default function AboutPage() {
             initial={reduced ? false : { opacity: 0, scale: 0.9, rotate: -3 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             transition={{ duration: 1, delay: 0.15 }}
-            className="relative mx-auto w-full max-w-sm"
+            className="relative mx-auto w-full max-w-md"
           >
-            <div className={cn("relative overflow-hidden rounded-[32px] p-2 shadow-[0_30px_80px_-24px_rgba(79,70,229,0.4)] dark:shadow-[0_0_60px_rgba(34,211,238,0.15)]", glass)}>
-              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[24px]">
+            {/* glowing halo behind the portrait */}
+            <div
+              aria-hidden
+              className="absolute -inset-8 -z-10 rounded-full bg-gradient-to-tr from-indigo-500/40 via-sky-400/25 to-violet-500/40 blur-[80px] dark:from-cyan-500/30 dark:via-blue-500/25 dark:to-purple-500/35"
+            />
+            {/* dark frame so the moody portrait's face floats out of the black */}
+            <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[#07070e] p-2 shadow-[0_40px_100px_-30px_rgba(0,0,0,0.8)] ring-1 ring-white/10 dark:ring-cyan-400/20">
+              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[24px] bg-black">
                 <Image
                   src="/images/jairajpic.jpeg"
                   alt="Jayraj Pratap Singh"
                   fill
-                  sizes="(max-width: 1024px) 90vw, 380px"
-                  className="object-cover"
+                  sizes="(max-width: 1024px) 90vw, 420px"
+                  className="object-cover object-[68%_36%] brightness-[1.18] contrast-[1.12]"
                   priority
                 />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                {/* accent rim light */}
+                <div className="pointer-events-none absolute inset-0 mix-blend-screen bg-gradient-to-tr from-transparent via-transparent to-indigo-400/25 dark:to-cyan-400/25" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent" />
               </div>
             </div>
             {/* floating accent chip */}

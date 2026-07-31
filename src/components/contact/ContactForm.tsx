@@ -126,7 +126,7 @@ export default function ContactForm() {
             whileHover={isSubmitting || sent ? undefined : { scale: 1.02 }}
             whileTap={isSubmitting || sent ? undefined : { scale: 0.97 }}
             className={cn(
-              "flex h-14 w-full items-center justify-center gap-2 rounded-xl font-bold text-white transition-colors disabled:opacity-70",
+              "btn-3d flex h-14 w-full items-center justify-center gap-2 rounded-xl font-bold text-white disabled:opacity-70",
               "bg-gradient-to-r from-indigo-500 to-violet-500 dark:from-cyan-400 dark:to-cyan-300 dark:text-black",
             )}
           >
