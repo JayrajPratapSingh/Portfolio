@@ -22,6 +22,7 @@ import type { IconKey, HeroContent } from "@/types";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/cn";
 import HeroScene from "./hero/HeroScene";
+import ParticleName from "./hero/ParticleName";
 
 const icons: Record<IconKey, React.ReactNode> = {
   server: <Server size={14} />,
@@ -111,11 +112,42 @@ export default function Intro({ content }: { content?: HeroContent }) {
           </motion.div>
 
           {/* heading */}
-          <h1 className="text-4xl font-black leading-[1.02] tracking-tight md:text-6xl">
-            <span className="text-foreground">{hero.name}</span>
+          <h1 className="sr-only">
+            Hi, I&apos;m {hero.name} — {hero.eyebrow}
+          </h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="text-lg font-medium text-foreground/70 md:text-xl"
+          >
+            Hi, I&apos;m
+          </motion.p>
+
+          {/* interactive particle name (scatter on hover, re-forms on leave) */}
+          <div aria-hidden className="relative -ml-0.5 h-[74px] w-full max-w-xl md:h-[120px]">
+            {reduced ? (
+              <span
+                className={cn(
+                  "block bg-clip-text text-6xl font-black tracking-tight text-transparent md:text-8xl",
+                  "bg-gradient-to-r from-fuchsia-500 via-indigo-500 to-sky-500",
+                  "dark:from-cyan-300 dark:via-blue-400 dark:to-purple-400",
+                )}
+              >
+                {hero.name}
+              </span>
+            ) : (
+              <ParticleName text={hero.name} />
+            )}
+          </div>
+
+          {/* typewriter role — smaller, professional */}
+          <div className="mt-2 flex items-center gap-2 font-mono text-base font-semibold md:text-xl">
+            <span className="text-emerald-500 dark:text-cyan-400">&gt;</span>
             <span
               className={cn(
-                "mt-1 block bg-clip-text text-transparent drop-shadow-sm",
+                "bg-clip-text text-transparent",
                 "bg-gradient-to-r from-fuchsia-500 via-indigo-500 to-sky-500",
                 "dark:from-cyan-300 dark:via-blue-400 dark:to-purple-400",
               )}
@@ -128,11 +160,11 @@ export default function Intro({ content }: { content?: HeroContent }) {
                   wrapper="span"
                   repeat={Infinity}
                   cursor
-                  className="inline-block min-w-[240px]"
+                  className="inline-block"
                 />
               )}
             </span>
-          </h1>
+          </div>
 
           <p className="mt-5 max-w-lg text-sm leading-7 text-foreground/70 md:text-base">
             {hero.description}

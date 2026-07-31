@@ -5,6 +5,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "static.wixstatic.com",
       },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
     ],
   },
 };

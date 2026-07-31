@@ -12,6 +12,8 @@ import {
   Search,
   Settings,
   LogOut,
+  Mail,
+  FileText,
 } from "lucide-react";
 
 const menuItems = [
@@ -19,6 +21,8 @@ const menuItems = [
   { title: "Hero", href: "/dashboard/hero", icon: Sparkles },
   { title: "About", href: "/dashboard/about", icon: User },
   { title: "Projects", href: "/dashboard/projects", icon: FolderKanban },
+  { title: "Resume", href: "/dashboard/resume", icon: FileText },
+  { title: "Messages", href: "/dashboard/messages", icon: Mail },
   { title: "Social Links", href: "/dashboard/social", icon: Share2 },
   { title: "SEO", href: "/dashboard/seo", icon: Search },
   { title: "Settings", href: "/dashboard/settings", icon: Settings },

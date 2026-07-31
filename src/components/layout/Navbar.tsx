@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { FaBars, FaTimes, FaGithub, FaLock } from "react-icons/fa";
+import { FaBars, FaTimes, FaGithub } from "react-icons/fa";
 import { Download } from "lucide-react";
 
 import { navItems } from "@/data/nav";
 import { cn } from "@/lib/cn";
 import { useScroll } from "@/hooks/useScroll";
 import NavBackground from "./NavBackground";
+import NavAdmin from "./NavAdmin";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import Magnetic from "@/components/ui/Magnetic";
 
@@ -99,17 +100,14 @@ export default function Navbar() {
             </IconLink>
 
             <Link
-              href="/resume.pdf"
-              target="_blank"
+              href="/resume"
               className="flex items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-sm text-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
             >
               <Download size={16} />
               Resume
             </Link>
 
-            <IconLink href="/admin/login" label="Admin login" subtle>
-              <FaLock />
-            </IconLink>
+            <NavAdmin />
 
             <ThemeToggle />
 
@@ -176,13 +174,12 @@ export default function Navbar() {
               <IconLink href={GITHUB} external label="GitHub" block>
                 <FaGithub />
               </IconLink>
-              <IconLink href="/resume.pdf" external label="Resume" block>
+              <IconLink href="/resume" label="Resume" block>
                 <Download size={16} />
               </IconLink>
-              <IconLink href="/admin/login" label="Admin login" block>
-                <FaLock />
-              </IconLink>
             </div>
+
+            <NavAdmin block />
 
             <Link
               href="/hire-me"

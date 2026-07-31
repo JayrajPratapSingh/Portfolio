@@ -2,6 +2,7 @@ import { hero } from "@/data/hero";
 import { about } from "@/data/about";
 import { projects } from "@/data/projects";
 import { socials } from "@/data/social";
+import { resume } from "@/data/resume";
 import { siteConfig } from "@/lib/constants";
 
 /** Editable SEO subset (the rest of metadata derives from this). */
@@ -23,6 +24,7 @@ export const contentDefaults = {
   projects,
   social: socials,
   seo: seoDefault,
+  resume,
 } as const;
 
 export type ContentSection = keyof typeof contentDefaults;

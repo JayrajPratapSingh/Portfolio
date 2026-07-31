@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import { Toaster } from "sonner";
-import Logo from "@/components/Floating/Logo";
+import SiteShell from "@/components/layout/SiteShell";
 import ThemeProvider from "@/providers/ThemeProvider";
-import Preloader from "@/components/Preloader";
 import { siteConfig } from "@/lib/constants";
+import { getContent } from "@/lib/content";
+import { seoDefault } from "@/lib/content-defaults";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,47 +17,49 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteConfig.url),
-  title: {
-    default: siteConfig.title,
-    template: `%s · ${siteConfig.shortName}`,
-  },
-  description: siteConfig.description,
-  keywords: [...siteConfig.keywords],
-  authors: [{ name: siteConfig.name, url: siteConfig.url }],
-  creator: siteConfig.name,
-  applicationName: siteConfig.title,
-  alternates: { canonical: "/" },
-  openGraph: {
-    type: "website",
-    locale: siteConfig.locale,
-    url: siteConfig.url,
-    siteName: siteConfig.title,
-    title: siteConfig.title,
-    description: siteConfig.description,
-    images: [
-      {
-        url: siteConfig.ogImage,
-        width: 1200,
-        height: 630,
-        alt: siteConfig.name,
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: siteConfig.title,
-    description: siteConfig.description,
-    images: [siteConfig.ogImage],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true, "max-image-preview": "large" },
-  },
-  icons: { icon: "/favicon.ico" },
-};
+/**
+ * Metadata is generated from the editable `seo` content section (falling back
+ * to the static defaults), so the SEO dashboard form drives the real head tags.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await getContent("seo", seoDefault);
+  const base = seo.url || siteConfig.url;
+
+  return {
+    metadataBase: new URL(base),
+    title: {
+      default: seo.title,
+      template: `%s · ${siteConfig.shortName}`,
+    },
+    description: seo.description,
+    keywords: seo.keywords,
+    authors: [{ name: siteConfig.name, url: base }],
+    creator: siteConfig.name,
+    applicationName: seo.title,
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      locale: siteConfig.locale,
+      url: base,
+      siteName: seo.title,
+      title: seo.title,
+      description: seo.description,
+      images: [{ url: seo.ogImage, width: 1200, height: 630, alt: siteConfig.name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: seo.title,
+      description: seo.description,
+      images: [seo.ogImage],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, "max-image-preview": "large" },
+    },
+    icons: { icon: "/favicon.ico" },
+  };
+}
 
 const personJsonLd = {
   "@context": "https://schema.org",
@@ -92,19 +92,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
         />
         <ThemeProvider>
-          <Preloader />
-          <Navbar />
-
-          {/* space for the fixed navbar */}
-          <main className="flex-1 pt-20">
-            {children}
-            <Toaster position="top-right" richColors closeButton />
-          </main>
-
-          <Footer />
-
-          {/* floating logo */}
-          <Logo />
+          <SiteShell>{children}</SiteShell>
         </ThemeProvider>
       </body>
     </html>

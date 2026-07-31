@@ -47,7 +47,7 @@ export const hero: HeroContent = {
     },
     {
       label: "Resume",
-      href: "/resume.pdf",
+      href: "/resume",
       variant: "ghost",
       icon: "download",
       download: true,

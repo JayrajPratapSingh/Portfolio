@@ -1,18 +1,37 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+
+const NavScene = dynamic(() => import("./NavScene"), { ssr: false });
 
 /**
- * Clean, dark-friendly navbar backdrop — smooth flowing light, no particles.
- * Two drifting aurora glows + a light orb travelling across + a soft sweep.
- * Theme-aware (indigo/violet by day, cyan/purple at night). CSS/transform only.
+ * Navbar backdrop — a Three.js waveform (points ribbon) layered under two
+ * drifting aurora glows and a light sweep. Theme-aware (indigo/violet by day,
+ * cyan/purple at night). The 3D layer is skipped for reduced-motion users.
  */
 export default function NavBackground() {
+  const { resolvedTheme } = useTheme();
+  const reduced = useReducedMotion();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isLight = mounted && resolvedTheme === "light";
+
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-0 overflow-hidden rounded-full"
     >
+      {/* Three.js waveform */}
+      {mounted && !reduced && (
+        <div className="absolute inset-0 opacity-70">
+          <NavScene isLight={isLight} />
+        </div>
+      )}
+
       {/* drifting aurora glow 1 */}
       <motion.div
         animate={{ x: ["-25%", "25%", "-25%"] }}
@@ -24,13 +43,6 @@ export default function NavBackground() {
         animate={{ x: ["20%", "-20%", "20%"] }}
         transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
         className="absolute -inset-y-6 -right-10 w-2/3 rounded-full bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.32),transparent_60%)] blur-lg dark:bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.4),transparent_60%)]"
-      />
-
-      {/* light orb travelling across */}
-      <motion.div
-        animate={{ x: ["-8%", "108%"], opacity: [0, 1, 1, 0] }}
-        transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
-        className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-indigo-400/60 blur-md dark:bg-cyan-300/70"
       />
 
       {/* soft sweep */}

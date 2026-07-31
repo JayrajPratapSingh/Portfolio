@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -30,6 +31,7 @@ import {
 } from "@/data/projects";
 import { cn } from "@/lib/cn";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { usePublicContent } from "@/hooks/usePublicContent";
 import ProjectsBackdrop from "@/components/projects/ProjectsBackdrop";
 
 const glass =
@@ -69,12 +71,13 @@ export default function ProjectsPage() {
   const reduced = useReducedMotion();
   const [filter, setFilter] = useState<Filter>("All");
   const [query, setQuery] = useState("");
+  const projectsData = usePublicContent<Project[]>("projects", projects);
 
-  const featured = useMemo(() => projects.filter((p) => p.featured), []);
+  const featured = useMemo(() => projectsData.filter((p) => p.featured), [projectsData]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return projects.filter((p) => {
+    return projectsData.filter((p) => {
       const matchesCat = filter === "All" || p.category === filter;
       const matchesQuery =
         !q ||
@@ -83,7 +86,7 @@ export default function ProjectsPage() {
         p.techStack.some((t) => t.toLowerCase().includes(q));
       return matchesCat && matchesQuery;
     });
-  }, [filter, query]);
+  }, [filter, query, projectsData]);
 
   return (
     <main className="relative min-h-screen overflow-hidden text-foreground">
@@ -216,6 +219,18 @@ function FeaturedCard({
     >
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100 dark:from-cyan-400/15 dark:to-purple-500/15" />
 
+      {project.image && (
+        <div className="relative mb-6 aspect-video w-full overflow-hidden rounded-[24px] border border-[var(--border)]">
+          <Image
+            src={project.image}
+            alt={project.title}
+            fill
+            sizes="(max-width: 1024px) 100vw, 560px"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="rounded-full border border-indigo-400/20 bg-indigo-400/10 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-indigo-600 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-200">
@@ -292,11 +307,21 @@ function GridCard({ project, reduced }: { project: Project; reduced: boolean }) 
     >
       {/* preview */}
       <div className="relative h-44 overflow-hidden bg-gradient-to-br from-indigo-400/10 via-sky-400/10 to-violet-400/10 dark:from-cyan-400/10 dark:via-blue-500/10 dark:to-purple-500/10">
-        <div className="absolute inset-0 grid place-items-center">
-          <div className="grid h-28 w-28 place-items-center rounded-full border border-indigo-400/20 bg-[var(--surface)]/40 text-indigo-500 backdrop-blur-xl transition-transform duration-500 group-hover:scale-110 dark:border-cyan-400/20 dark:text-cyan-300">
-            {categoryIcon(project.category)}
+        {project.image ? (
+          <Image
+            src={project.image}
+            alt={project.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 400px"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center">
+            <div className="grid h-28 w-28 place-items-center rounded-full border border-indigo-400/20 bg-[var(--surface)]/40 text-indigo-500 backdrop-blur-xl transition-transform duration-500 group-hover:scale-110 dark:border-cyan-400/20 dark:text-cyan-300">
+              {categoryIcon(project.category)}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="p-6">

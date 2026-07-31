@@ -20,6 +20,9 @@ export interface Project {
   techStack: string[];
   /** Short case-study bullets shown on the featured cards. */
   highlights: string[];
+  /** Optional Cloudinary preview image (falls back to a category icon). */
+  image?: string;
+  imagePublicId?: string;
 }
 
 /** Projects — typed + serializable (API/CMS-ready). */

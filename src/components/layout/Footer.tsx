@@ -13,9 +13,10 @@ import {
 import { FiArrowUpRight, FiArrowUp } from "react-icons/fi";
 
 import { navItems } from "@/data/nav";
-import { socials } from "@/data/social";
+import { socials, type SocialLink } from "@/data/social";
 import { cn } from "@/lib/cn";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { usePublicContent } from "@/hooks/usePublicContent";
 
 const FooterBackground = dynamic(() => import("./FooterBackground"), {
   ssr: false,
@@ -47,6 +48,7 @@ export default function Footer() {
   useEffect(() => setMounted(true), []);
   const isLight = mounted && resolvedTheme === "light";
   const year = new Date().getFullYear();
+  const socialLinks = usePublicContent<SocialLink[]>("social", socials);
 
   const reveal = (delay = 0) =>
     reduced
@@ -139,8 +141,7 @@ export default function Footer() {
               ))}
               <li>
                 <Link
-                  href="/resume.pdf"
-                  target="_blank"
+                  href="/resume"
                   className="text-foreground/70 transition-colors hover:text-foreground"
                 >
                   Resume
@@ -155,7 +156,7 @@ export default function Footer() {
               Connect
             </h3>
             <ul className="space-y-2 text-sm">
-              {socials.map((s) => (
+              {socialLinks.map((s) => (
                 <li key={s.key}>
                   <Link
                     href={s.href}

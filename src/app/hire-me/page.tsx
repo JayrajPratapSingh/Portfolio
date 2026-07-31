@@ -1,15 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
 import { Mail, MapPin, Clock } from "lucide-react";
 import { FaGithub, FaLinkedin, FaInstagram } from "react-icons/fa";
 
 import ContactForm from "@/components/contact/ContactForm";
 import ContactBackdrop from "@/components/contact/ContactBackdrop";
-import { socials } from "@/data/social";
+import { socials, type SocialLink } from "@/data/social";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { usePublicContent } from "@/hooks/usePublicContent";
 import { cn } from "@/lib/cn";
+
+const ContactScene3D = dynamic(() => import("@/components/contact/ContactScene3D"), {
+  ssr: false,
+});
 
 const socialIcons = {
   github: <FaGithub />,
@@ -24,10 +32,22 @@ const glass =
 
 export default function ContactPage() {
   const reduced = useReducedMotion();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isLight = mounted && resolvedTheme === "light";
+  const socialLinks = usePublicContent<SocialLink[]>("social", socials);
 
   return (
     <main className="relative min-h-screen overflow-hidden text-foreground">
       <ContactBackdrop />
+
+      {/* immersive 3D crystal — over the gradient, behind the content */}
+      {mounted && !reduced && (
+        <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+          <ContactScene3D isLight={isLight} />
+        </div>
+      )}
 
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-12 px-6 py-24 lg:grid-cols-2">
         {/* LEFT — info */}
@@ -79,7 +99,7 @@ export default function ContactPage() {
 
           {/* socials */}
           <div className="mt-8 flex items-center gap-3">
-            {socials.map((s) => (
+            {socialLinks.map((s) => (
               <Link
                 key={s.key}
                 href={s.href}

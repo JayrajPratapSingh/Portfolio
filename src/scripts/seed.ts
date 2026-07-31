@@ -11,6 +11,7 @@ import { hero } from "../data/hero";
 import { about } from "../data/about";
 import { projects } from "../data/projects";
 import { socials } from "../data/social";
+import { resume } from "../data/resume";
 import { siteConfig } from "../lib/constants";
 
 const seoDefault = {
@@ -27,6 +28,7 @@ const sections: Record<string, unknown> = {
   projects,
   social: socials,
   seo: seoDefault,
+  resume,
 };
 
 async function run() {

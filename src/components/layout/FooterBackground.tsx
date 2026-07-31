@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
 /** Undulating grid of glowing points seen at a low angle — a 3D horizon that
@@ -69,6 +69,61 @@ function Wave({ isLight }: { isLight: boolean }) {
   );
 }
 
+/** Sparse floating motes drifting upward above the wave. */
+function Motes({ isLight }: { isLight: boolean }) {
+  const ref = useRef<THREE.Points>(null);
+  const COUNT = 140;
+
+  const { geometry, seed } = useMemo(() => {
+    const positions = new Float32Array(COUNT * 3);
+    const seed = new Float32Array(COUNT);
+    for (let i = 0; i < COUNT; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 28;
+      positions[i * 3 + 1] = Math.random() * 8;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+      seed[i] = Math.random() * 10;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    return { geometry: g, seed };
+  }, []);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    const pos = geometry.attributes.position.array as Float32Array;
+    for (let i = 0; i < COUNT; i++) {
+      pos[i * 3 + 1] = (pos[i * 3 + 1] + 0.006) % 8;
+      pos[i * 3] += Math.sin(t * 0.5 + seed[i]) * 0.002;
+    }
+    geometry.attributes.position.needsUpdate = true;
+  });
+
+  return (
+    <points ref={ref} geometry={geometry}>
+      <pointsMaterial
+        size={isLight ? 0.05 : 0.045}
+        color={isLight ? "#818cf8" : "#67e8f9"}
+        transparent
+        opacity={isLight ? 0.6 : 0.5}
+        sizeAttenuation
+        depthWrite={false}
+        blending={isLight ? THREE.NormalBlending : THREE.AdditiveBlending}
+      />
+    </points>
+  );
+}
+
+/** Gentle camera parallax that follows the pointer. */
+function Rig() {
+  const { camera, pointer } = useThree();
+  useFrame(() => {
+    camera.position.x += (pointer.x * 1.4 - camera.position.x) * 0.03;
+    camera.position.y += (6 + pointer.y * 0.8 - camera.position.y) * 0.03;
+    camera.lookAt(0, 0, 0);
+  });
+  return null;
+}
+
 export default function FooterBackground({ isLight }: { isLight: boolean }) {
   const bg = isLight ? "#eef2ff" : "#04010f";
   return (
@@ -82,6 +137,8 @@ export default function FooterBackground({ isLight }: { isLight: boolean }) {
       <color attach="background" args={[bg]} />
       <fog attach="fog" args={[bg, 10, 26]} />
       <Wave isLight={isLight} />
+      <Motes isLight={isLight} />
+      <Rig />
     </Canvas>
   );
 }

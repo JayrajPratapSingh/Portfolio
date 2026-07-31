@@ -16,9 +16,10 @@ import {
   Cpu,
 } from "lucide-react";
 
-import { about, type ExpertiseKey } from "@/data/about";
+import { about, type AboutContent, type ExpertiseKey } from "@/data/about";
 import { cn } from "@/lib/cn";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { usePublicContent } from "@/hooks/usePublicContent";
 import AboutBackdrop from "@/components/about/AboutBackdrop";
 
 const expertiseIcons: Record<ExpertiseKey, React.ReactNode> = {
@@ -34,6 +35,7 @@ const glass =
 export default function AboutPage() {
   const reduced = useReducedMotion();
   const [openExp, setOpenExp] = useState<number | null>(0);
+  const content = usePublicContent<AboutContent>("about", about);
 
   const reveal = (delay = 0) =>
     reduced
@@ -60,24 +62,24 @@ export default function AboutPage() {
             <span className="mb-8 inline-flex items-center gap-3 rounded-full border border-indigo-400/20 bg-indigo-400/5 px-5 py-2.5 backdrop-blur-xl dark:border-cyan-400/20 dark:bg-cyan-400/5">
               <Rocket size={16} className="text-indigo-500 dark:text-cyan-300" />
               <span className="text-xs uppercase tracking-[0.3em] text-foreground/70">
-                {about.eyebrow}
+                {content.eyebrow}
               </span>
             </span>
 
             <h1 className="text-6xl font-black leading-[0.9] tracking-tight md:text-8xl">
-              {about.firstName}
+              {content.firstName}
               <span className="mt-2 block bg-gradient-to-r from-indigo-500 via-sky-500 to-violet-500 bg-clip-text text-transparent dark:from-cyan-300 dark:via-blue-400 dark:to-purple-400">
-                {about.lastName}
+                {content.lastName}
               </span>
             </h1>
 
             <p className="mt-8 max-w-xl text-lg leading-relaxed text-foreground/70 md:text-xl">
-              {about.intro}
+              {content.intro}
             </p>
 
             {/* stats */}
             <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {about.stats.map((s) => (
+              {content.stats.map((s) => (
                 <div key={s.label} className={cn("rounded-2xl p-5", glass)}>
                   <div className="text-3xl font-black text-indigo-500 dark:text-cyan-300">
                     {s.value}
@@ -126,7 +128,7 @@ export default function AboutPage() {
         {/* SKILLS marquee-ish chips */}
         <motion.section {...reveal()} className="pb-12">
           <div className="flex flex-wrap gap-3">
-            {about.skills.map((skill) => (
+            {content.skills.map((skill) => (
               <span
                 key={skill}
                 className={cn(
@@ -155,7 +157,7 @@ export default function AboutPage() {
           </motion.div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {about.expertise.map((card, i) => (
+            {content.expertise.map((card, i) => (
               <motion.div
                 {...reveal(i * 0.08)}
                 key={card.key}
@@ -183,7 +185,7 @@ export default function AboutPage() {
 
           <div className="relative space-y-6 pl-8">
             <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gradient-to-b from-indigo-500 to-transparent dark:from-cyan-400" />
-            {about.experiences.map((exp, i) => {
+            {content.experiences.map((exp, i) => {
               const open = openExp === i;
               return (
                 <motion.div {...reveal(i * 0.05)} key={exp.company} className="relative">
@@ -257,7 +259,7 @@ export default function AboutPage() {
                 <h3 className="text-2xl font-black">Education</h3>
               </div>
               <div className="space-y-8">
-                {about.education.map((e) => (
+                {content.education.map((e) => (
                   <div key={e.degree}>
                     <div className="text-lg font-bold">{e.degree}</div>
                     <div className="mt-1 text-foreground/55">{e.place}</div>
@@ -272,7 +274,7 @@ export default function AboutPage() {
                 <h3 className="text-2xl font-black">Certifications</h3>
               </div>
               <div className="space-y-4">
-                {about.certifications.map((c) => (
+                {content.certifications.map((c) => (
                   <div
                     key={c}
                     className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-5"
@@ -296,10 +298,10 @@ export default function AboutPage() {
             className={cn("rounded-[40px] p-12 text-center md:p-16", glass)}
           >
             <h2 className="mx-auto max-w-3xl text-4xl font-black leading-tight md:text-6xl">
-              {about.closing.title}
+              {content.closing.title}
             </h2>
             <p className="mx-auto mt-8 max-w-2xl leading-9 text-foreground/60 md:text-lg">
-              {about.closing.body}
+              {content.closing.body}
             </p>
           </motion.div>
         </section>
