@@ -28,6 +28,11 @@ const winU = (s: number, a: number, b: number) => THREE.MathUtils.clamp((s - a) 
 const bell = (u: number) =>
   THREE.MathUtils.smoothstep(u, 0, 0.18) * (1 - THREE.MathUtils.smoothstep(u, 0.82, 1));
 
+/** Fade in over [a,b] then out over [c,d] so a prop belongs to one dive zone
+    (e.g. the coral garden) and clears as the camera travels past it. */
+const zoneFade = (s: number, a: number, b: number, c: number, d: number) =>
+  THREE.MathUtils.smoothstep(s, a, b) * (1 - THREE.MathUtils.smoothstep(s, c, d));
+
 /* --- geometry helpers (vertex-colour a mesh, build a flat triangle fin) --- */
 function shadeByY(geo: THREE.BufferGeometry, top: THREE.Color, bottom: THREE.Color) {
   geo.computeBoundingBox();
@@ -184,6 +189,22 @@ function makeBladeGeometry(H = 1.9, baseW = 0.12, curveAmt = 0.36) {
   return g;
 }
 
+/* A sea anemone: a radial crown of short curved tentacles (reuses the blade),
+   grayscale-baked so instanceColor tints each one a vivid colour. */
+function makeAnemoneGeometry() {
+  const TENT = 16;
+  const parts: THREE.BufferGeometry[] = [];
+  for (let k = 0; k < TENT; k++) {
+    const ang = (k / TENT) * Math.PI * 2;
+    const b = makeBladeGeometry(0.42, 0.045, 0.55);
+    b.rotateX(0.6); // lean outward into a crown
+    b.rotateY(ang);
+    b.translate(Math.cos(ang) * 0.06, 0, Math.sin(ang) * 0.06);
+    parts.push(b);
+  }
+  return mergeGeometries(parts)!;
+}
+
 /* An irregular, faceted rock. Displaces an icosahedron by a per-vertex hash
    (welded, so no cracks), flat-shades it, and bakes a gray↔brown, top-lit
    vertex-colour so it reads as a real stone in the unlit underwater scene. */
@@ -212,6 +233,51 @@ function makeRockGeometry() {
     const top = 0.4 + 0.6 * Math.max(0, nn.getY(i)); // faux top light
     const tone = h(np.getX(i) * 3, np.getY(i) * 3, np.getZ(i) * 3);
     c.copy(gray).lerp(brown, tone * 0.6).multiplyScalar(top * (0.85 + tone * 0.3));
+    col[i * 3] = c.r;
+    col[i * 3 + 1] = c.g;
+    col[i * 3 + 2] = c.b;
+  }
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  return g;
+}
+
+/* A weathered stone gateway (two pillars + a broken lintel), top-lit and
+   speckled with coral patches — an ancient-ruins structure the camera passes. */
+function makeRuinGeometry() {
+  const hsh = (x: number, y: number, z: number) => {
+    const s = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453;
+    return s - Math.floor(s);
+  };
+  const boxes: THREE.BufferGeometry[] = [];
+  const add = (w: number, h: number, d: number, x: number, y: number, z: number) => {
+    const b = new THREE.BoxGeometry(w, h, d).toNonIndexed();
+    b.translate(x, y, z);
+    boxes.push(b);
+  };
+  add(0.9, 5.4, 0.9, -2.3, 2.7, 0); // left pillar
+  add(0.9, 5.4, 0.9, 2.3, 2.7, 0); // right pillar
+  add(5.7, 1.0, 1.0, 0, 5.7, 0); // lintel
+  add(1.6, 0.8, 0.9, -1.4, 6.2, 0); // broken block on top
+  const g = mergeGeometries(boxes)!;
+  g.computeVertexNormals();
+  const p = g.attributes.position;
+  const nn = g.attributes.normal;
+  const stone = new THREE.Color("#585d61");
+  const stone2 = new THREE.Color("#6a6255");
+  const coralA = new THREE.Color("#c96f4a");
+  const coralB = new THREE.Color("#5fae7d");
+  const c = new THREE.Color();
+  const col = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i),
+      y = p.getY(i),
+      z = p.getZ(i);
+    const top = 0.55 + 0.45 * Math.max(0, nn.getY(i));
+    const n = hsh(x * 2, y * 2, z * 2);
+    c.copy(stone).lerp(stone2, hsh(x, y, z));
+    if (n > 0.8) c.lerp(coralA, 0.7);
+    else if (n > 0.68) c.lerp(coralB, 0.6);
+    c.multiplyScalar(top * (0.85 + n * 0.2));
     col[i * 3] = c.r;
     col[i * 3 + 1] = c.g;
     col[i * 3 + 2] = c.b;
@@ -478,7 +544,7 @@ function Seagrass() {
 
   useFrame((state) => {
     uTime.value = state.clock.elapsedTime;
-    if (ref.current) material.opacity = clampFade(dayScroll.progress, 0.55, 0.75) * 0.95;
+    if (ref.current) material.opacity = zoneFade(dayScroll.progress, 0.3, 0.4, 0.52, 0.62) * 0.95;
   });
 
   return (
@@ -522,7 +588,7 @@ function Rocks() {
   }, []);
 
   useFrame(() => {
-    material.opacity = clampFade(dayScroll.progress, 0.5, 0.7) * 0.95;
+    material.opacity = clampFade(dayScroll.progress, 0.16, 0.3) * 0.95;
   });
 
   return (
@@ -639,7 +705,7 @@ function Coral() {
     return { mats, cols };
   }, []);
   useFrame(() => {
-    material.opacity = clampFade(dayScroll.progress, 0.58, 0.78) * 0.8;
+    material.opacity = zoneFade(dayScroll.progress, 0.16, 0.26, 0.4, 0.5) * 0.92;
   });
   return (
     <instancedMesh
@@ -699,7 +765,7 @@ function Jellyfish() {
     const g = group.current;
     if (!g) return;
     const t = state.clock.elapsedTime;
-    const fade = clampFade(dayScroll.progress, 0.6, 0.8);
+    const fade = zoneFade(dayScroll.progress, 0.34, 0.44, 0.72, 0.82);
     for (let i = 0; i < jellies.length; i++) {
       const j = jellies[i];
       const child = g.children[i] as THREE.Mesh;
@@ -755,7 +821,7 @@ function Manta() {
     const m = mesh.current;
     if (!m) return;
     const t = state.clock.elapsedTime;
-    const u = winU(dayScroll.progress, 0.72, 0.85); // glides past you here
+    const u = winU(dayScroll.progress, 0.46, 0.6); // ray glides through the ruins
     uniforms.uFade.value = bell(u);
     m.position.set(
       THREE.MathUtils.lerp(-32, 32, u),
@@ -808,7 +874,7 @@ function Whale() {
     const m = mesh.current;
     if (!m) return;
     const t = state.clock.elapsedTime;
-    const u = winU(dayScroll.progress, 0.88, 1.0); // the grand finale drifts past
+    const u = winU(dayScroll.progress, 0.78, 0.94); // whale crosses the canyon far off
     uniforms.uFade.value = bell(u);
     m.position.set(
       THREE.MathUtils.lerp(-34, 34, u),
@@ -857,7 +923,7 @@ function BubbleColumns() {
   }, []);
   useFrame((_, dt) => {
     uniforms.uTime.value += Math.min(dt, 0.05);
-    uniforms.uFade.value = clampFade(dayScroll.progress, 0.55, 0.75);
+    uniforms.uFade.value = clampFade(dayScroll.progress, 0.18, 0.32);
   });
   const vert = /* glsl */ `
     uniform float uTime; uniform float uFade; attribute float aSeed; varying float vA;
@@ -915,7 +981,7 @@ function School() {
     if (!mesh) return;
     const t = state.clock.elapsedTime;
     uTime.value = t;
-    material.opacity = clampFade(dayScroll.progress, 0.44, 0.62);
+    material.opacity = zoneFade(dayScroll.progress, 0.16, 0.26, 0.42, 0.52);
     const cx = Math.cos(t * 0.15) * 10;
     const cz = -12 + Math.sin(t * 0.15) * 10;
     const cy = -7 + Math.sin(t * 0.3) * 1.5;
@@ -966,8 +1032,8 @@ function Sharks() {
   const { camera } = useThree();
   const sharks = useMemo(
     () => [
-      { y: -8, z: -26, dir: 1, size: 20, win: [0.6, 0.71] as [number, number], u: { uFade: { value: 0 } } },
-      { y: -13, z: -32, dir: -1, size: 27, win: [0.66, 0.77] as [number, number], u: { uFade: { value: 0 } } },
+      { y: -8, z: -26, dir: 1, size: 20, win: [0.74, 0.85] as [number, number], u: { uFade: { value: 0 } } },
+      { y: -13, z: -32, dir: -1, size: 27, win: [0.8, 0.9] as [number, number], u: { uFade: { value: 0 } } },
     ],
     [],
   );
@@ -1035,7 +1101,7 @@ function Turtle() {
     const m = mesh.current;
     if (!m) return;
     const t = state.clock.elapsedTime;
-    const u = winU(dayScroll.progress, 0.48, 0.62); // swims past you here
+    const u = winU(dayScroll.progress, 0.2, 0.34); // turtle crosses the coral kingdom
     uniforms.uFade.value = bell(u);
     m.position.set(
       THREE.MathUtils.lerp(-22, 22, u),
@@ -1085,7 +1151,7 @@ function Algae() {
   }, []);
   useFrame((state) => {
     uTime.value = state.clock.elapsedTime;
-    if (ref.current) material.opacity = clampFade(dayScroll.progress, 0.52, 0.72) * 0.95;
+    if (ref.current) material.opacity = zoneFade(dayScroll.progress, 0.28, 0.38, 0.52, 0.62) * 0.95;
   });
   return (
     <instancedMesh
@@ -1124,7 +1190,7 @@ function Snails() {
     return arr;
   }, []);
   useFrame(() => {
-    material.opacity = clampFade(dayScroll.progress, 0.55, 0.75) * 0.95;
+    material.opacity = zoneFade(dayScroll.progress, 0.5, 0.6, 0.82, 0.92) * 0.95;
   });
   return (
     <instancedMesh
@@ -1204,7 +1270,7 @@ function Starfish() {
     return arr;
   }, []);
   useFrame(() => {
-    material.opacity = clampFade(dayScroll.progress, 0.6, 0.8) * 0.95;
+    material.opacity = zoneFade(dayScroll.progress, 0.18, 0.28, 0.42, 0.52) * 0.95;
   });
   return (
     <instancedMesh
@@ -1263,7 +1329,7 @@ function GlowDomes() {
     const g = group.current;
     if (!g) return;
     const t = state.clock.elapsedTime;
-    const fade = clampFade(dayScroll.progress, 0.82, 0.98);
+    const fade = zoneFade(dayScroll.progress, 0.6, 0.7, 1.0, 1.06);
     for (let i = 0; i < domes.length; i++) {
       const d = domes[i];
       const child = g.children[i] as THREE.Mesh;
@@ -1285,6 +1351,125 @@ function GlowDomes() {
   );
 }
 
+/* ----------------------------- Anemones ----------------------------- */
+function Anemones() {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const COUNT = 40;
+  const uTime = useMemo(() => ({ value: 0 }), []);
+  const geometry = useMemo(() => makeAnemoneGeometry(), []);
+  const material = useMemo(() => makeGrassMaterial(uTime, 0.42, 0.14), [uTime]);
+  const data = useMemo(() => {
+    const dummy = new THREE.Object3D();
+    const mats: THREE.Matrix4[] = [];
+    const cols: THREE.Color[] = [];
+    const tints = ["#ff7fb0", "#c77dff", "#ff9e6d", "#7fd4ff", "#ffd166", "#ff6b9d"];
+    for (let i = 0; i < COUNT; i++) {
+      dummy.position.set((Math.random() - 0.5) * 40, -20, -Math.random() * 30 + 4);
+      dummy.rotation.y = Math.random() * Math.PI;
+      dummy.scale.setScalar(0.7 + Math.random() * 0.8);
+      dummy.updateMatrix();
+      mats.push(dummy.matrix.clone());
+      cols.push(new THREE.Color(tints[Math.floor(Math.random() * tints.length)]));
+    }
+    return { mats, cols };
+  }, []);
+  useFrame((state) => {
+    uTime.value = state.clock.elapsedTime;
+    if (ref.current) material.opacity = zoneFade(dayScroll.progress, 0.16, 0.26, 0.4, 0.5) * 0.9;
+  });
+  return (
+    <instancedMesh
+      ref={(m) => {
+        if (m && !m.userData.set) {
+          data.mats.forEach((mat, i) => m.setMatrixAt(i, mat));
+          data.cols.forEach((c, i) => m.setColorAt(i, c));
+          m.instanceMatrix.needsUpdate = true;
+          if (m.instanceColor) m.instanceColor.needsUpdate = true;
+          m.userData.set = true;
+        }
+      }}
+      args={[geometry, material, COUNT]}
+      frustumCulled={false}
+    />
+  );
+}
+
+/* ------------------------- Ancient ruins --------------------------- */
+function Ruins() {
+  const material = useMemo(
+    () => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, fog: true }),
+    [],
+  );
+  const geometry = useMemo(() => makeRuinGeometry(), []);
+  const matrices = useMemo(() => {
+    const dummy = new THREE.Object3D();
+    const arr: THREE.Matrix4[] = [];
+    for (let i = 0; i < 6; i++) {
+      dummy.position.set((Math.random() - 0.5) * 16, -11, -12 - i * 5 - Math.random() * 3);
+      dummy.rotation.y = (Math.random() - 0.5) * 0.6;
+      const s = 0.9 + Math.random() * 0.7;
+      dummy.scale.set(s, s * (0.9 + Math.random() * 0.3), s);
+      dummy.updateMatrix();
+      arr.push(dummy.matrix.clone());
+    }
+    return arr;
+  }, []);
+  useFrame(() => {
+    material.opacity = zoneFade(dayScroll.progress, 0.44, 0.52, 0.6, 0.68) * 0.95;
+  });
+  return (
+    <instancedMesh
+      ref={(m) => {
+        if (m && !m.userData.set) {
+          matrices.forEach((mat, i) => m.setMatrixAt(i, mat));
+          m.instanceMatrix.needsUpdate = true;
+          m.userData.set = true;
+        }
+      }}
+      args={[geometry, material, 6]}
+      frustumCulled={false}
+    />
+  );
+}
+
+/* --------------------- Canyon walls (giant rocks) ------------------- */
+function CanyonWalls() {
+  const material = useMemo(
+    () => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, fog: true }),
+    [],
+  );
+  const geometry = useMemo(() => makeRockGeometry(), []);
+  const matrices = useMemo(() => {
+    const dummy = new THREE.Object3D();
+    const arr: THREE.Matrix4[] = [];
+    for (let i = 0; i < 12; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      dummy.position.set(side * (13 + Math.random() * 4), -14 + Math.random() * 6, -10 - i * 3.5 - Math.random() * 4);
+      dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      dummy.scale.set(4 + Math.random() * 3, 6 + Math.random() * 5, 4 + Math.random() * 3);
+      dummy.updateMatrix();
+      arr.push(dummy.matrix.clone());
+    }
+    return arr;
+  }, []);
+  useFrame(() => {
+    material.opacity = zoneFade(dayScroll.progress, 0.72, 0.8, 0.94, 1.0) * 0.95;
+  });
+  return (
+    <instancedMesh
+      ref={(m) => {
+        if (m && !m.userData.set) {
+          matrices.forEach((mat, i) => m.setMatrixAt(i, mat));
+          m.instanceMatrix.needsUpdate = true;
+          m.userData.set = true;
+        }
+      }}
+      args={[geometry, material, 12]}
+      frustumCulled={false}
+    />
+  );
+}
+
 export default function SeaLife() {
   return (
     <>
@@ -1293,13 +1478,14 @@ export default function SeaLife() {
       <Seagrass />
       <Algae />
       <Rocks />
-      <Snails />
+      <CanyonWalls />
       <Starfish />
       <Coral />
+      <Anemones />
+      <Ruins />
       <Jellyfish />
       <GlowDomes />
       <BubbleColumns />
-      <Oyster />
 
       {/* Real models when present in /public/models/, else procedural fallback.
           scale / rotation.y are model-dependent — tune once your .glb is in. */}

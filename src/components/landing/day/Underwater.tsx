@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { dayScroll } from "./signals";
+import { sampleBiome } from "./biome";
 
 /**
  * The world below the surface. Everything fades in via `uFade`, driven by the
@@ -83,6 +84,7 @@ export default function Underwater() {
   const floorMat = useRef<THREE.ShaderMaterial>(null);
   const bubbleMat = useRef<THREE.ShaderMaterial>(null);
   const shaftMats = useRef<THREE.ShaderMaterial[]>([]);
+  const biomeCol = useMemo(() => new THREE.Color(), []);
 
   const floorU = useMemo(() => ({ uTime: { value: 0 }, uFade: { value: 0 } }), []);
   const bubbleU = useMemo(() => ({ uTime: { value: 0 }, uFade: { value: 0 } }), []);
@@ -117,11 +119,14 @@ export default function Underwater() {
   useFrame((_, dt) => {
     const d = Math.min(dt, 0.05);
     const fade = THREE.MathUtils.clamp(
-      (dayScroll.progress - 0.28) / 0.24,
+      (dayScroll.progress - 0.12) / 0.1,
       0,
       1,
     );
-    if (backdrop.current) backdrop.current.opacity = fade;
+    if (backdrop.current) {
+      backdrop.current.opacity = fade;
+      backdrop.current.color.copy(sampleBiome(dayScroll.progress, biomeCol));
+    }
     if (floorMat.current) {
       floorMat.current.uniforms.uTime.value += d;
       floorMat.current.uniforms.uFade.value = fade;
@@ -130,10 +135,15 @@ export default function Underwater() {
       bubbleMat.current.uniforms.uTime.value += d;
       bubbleMat.current.uniforms.uFade.value = fade;
     }
+    // light shafts pour brightest through the sunlit shallows/coral, then dim
+    // as we sink into the twilight and the deep.
+    const shaftFade =
+      THREE.MathUtils.smoothstep(dayScroll.progress, 0.14, 0.26) *
+      (1 - THREE.MathUtils.smoothstep(dayScroll.progress, 0.52, 0.68));
     shaftMats.current.forEach((m) => {
       if (!m) return;
       m.uniforms.uTime.value += d;
-      m.uniforms.uFade.value = fade;
+      m.uniforms.uFade.value = shaftFade;
     });
   });
 

@@ -15,7 +15,10 @@ export interface ScrollState {
 
 /**
  * Lightweight scroll observer for hide/show navbars and condensing chrome.
- * Uses a single passive listener and ignores sub-threshold jitter.
+ * Polls `window.scrollY` on rAF so it stays correct under smooth-scroll libs
+ * (Lenis) whose programmatic scrolls don't always emit native scroll events —
+ * otherwise the navbar can get stuck hidden even at the top. React bails on
+ * unchanged state, so this only re-renders when a value actually flips.
  */
 export function useScroll(threshold = 8): ScrollState {
   const [direction, setDirection] = useState<ScrollDirection>("up");
@@ -25,20 +28,21 @@ export function useScroll(threshold = 8): ScrollState {
 
   useEffect(() => {
     last.current = window.scrollY;
+    let raf = 0;
 
-    const onScroll = () => {
+    const tick = () => {
       const y = window.scrollY;
       setAtTop(y < 4);
       setScrolled(y > 24);
-
-      if (Math.abs(y - last.current) < threshold) return;
-      setDirection(y > last.current && y > 80 ? "down" : "up");
-      last.current = y;
+      if (Math.abs(y - last.current) >= threshold) {
+        setDirection(y > last.current && y > 80 ? "down" : "up");
+        last.current = y;
+      }
+      raf = requestAnimationFrame(tick);
     };
 
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [threshold]);
 
   return { direction, atTop, scrolled };

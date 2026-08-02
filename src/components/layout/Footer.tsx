@@ -61,7 +61,7 @@ export default function Footer() {
         };
 
   return (
-    <footer className="relative overflow-hidden border-t border-[var(--border)] bg-[var(--surface)] px-6 pb-10 pt-20 text-foreground md:px-16 dark:bg-[#04010f]">
+    <footer className="relative z-30 overflow-hidden border-t border-[var(--border)] bg-[var(--surface)] px-6 pb-10 pt-20 text-foreground md:px-16 dark:bg-[#04010f]">
       {/* animated gradient top-line — both themes */}
       <div
         aria-hidden

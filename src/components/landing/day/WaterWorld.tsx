@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { dayScroll, dayMouse } from "./signals";
+import { sampleBiome } from "./biome";
 import DaySun, { SUN_POS } from "./DaySun";
 import Underwater from "./Underwater";
 import SeaLife from "./SeaLife";
@@ -223,34 +224,38 @@ function Pollen() {
    page scrolls. Also grades the fog from warm evening haze to a murky deep. */
 function CameraRig() {
   const { camera, scene } = useThree();
-  const above = useMemo(() => new THREE.Color("#e9dccb"), []);
-  const deep = useMemo(() => new THREE.Color("#05303f"), []);
   const fogCol = useMemo(() => new THREE.Color(), []);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     const s = dayScroll.progress;
-    const dive = THREE.MathUtils.smoothstep(s, 0.22, 0.5);
+    const dive = THREE.MathUtils.smoothstep(s, 0.04, 0.14); // drop below the surface fast
+    const canyon = THREE.MathUtils.smoothstep(s, 0.8, 1.0); // final plunge into the abyss
 
-    const tx = dayMouse.nx * 0.5;
+    // gentle side-to-side "swimming with a camera" weave while travelling
+    const weave = Math.sin(t * 0.08) * 1.3 + Math.sin(t * 0.19) * 0.5;
+    const tx = dayMouse.nx * 0.5 + weave * dive;
     const yAbove = 2.1 + dayMouse.ny * 0.22 + Math.sin(t * 0.2) * 0.06;
-    const yUnder = -5.0 - Math.max(0, s - 0.5) * 22.0;
+    const yUnder = -13.0 - s * 2.0 - canyon * 7.0; // cruise near the bed, then drop
     const targetY = THREE.MathUtils.lerp(yAbove, yUnder, dive);
-    const targetZ = 7.5 - s * 6.0;
+    const targetZ = 7.0 - s * 30.0; // long, continuous forward travel through the world
 
     camera.position.x += (tx - camera.position.x) * 0.03;
     camera.position.y += (targetY - camera.position.y) * 0.04;
     camera.position.z += (targetZ - camera.position.z) * 0.04;
 
-    const lookY = THREE.MathUtils.lerp(-0.3, targetY - 5.0, dive);
-    camera.lookAt(dayMouse.nx * 0.3, lookY, targetZ - 12.0);
+    const lookY = THREE.MathUtils.lerp(-0.3, targetY + 2.5, dive);
+    camera.lookAt(dayMouse.nx * 0.3 + weave * 0.4 * dive, lookY, targetZ - 14.0);
 
+    // biome colour journey: fog shifts through the 7 zones, clear in the sunlit
+    // shallows/coral, ever murkier toward the canyon and the abyss.
     const fog = scene.fog as THREE.Fog | null;
     if (fog) {
-      fogCol.copy(above).lerp(deep, dive);
+      sampleBiome(s, fogCol);
       fog.color.copy(fogCol);
-      fog.near = THREE.MathUtils.lerp(22, 5, dive);
-      fog.far = THREE.MathUtils.lerp(70, 32, dive);
+      const murk = THREE.MathUtils.smoothstep(s, 0.16, 1.0);
+      fog.near = THREE.MathUtils.lerp(20, 4, murk);
+      fog.far = THREE.MathUtils.lerp(72, 24, murk);
     }
   });
   return null;

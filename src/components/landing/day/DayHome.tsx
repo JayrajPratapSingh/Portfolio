@@ -12,6 +12,7 @@ import { ArrowUpRight, Download } from "lucide-react";
 import type { HeroContent } from "@/types";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import Magnetic from "@/components/ui/Magnetic";
+import ParticleName from "@/components/landing/hero/ParticleName";
 import { dayScroll, dayMouse } from "./signals";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -170,15 +171,21 @@ export default function DayHome({ content }: { content?: HeroContent }) {
               {eyebrow}
             </motion.span>
 
-            <motion.h1
-              initial={reduced ? false : { opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.1 }}
-              className="mt-8 text-[16vw] font-black leading-[0.85] tracking-tight md:text-[12rem]"
-              style={{ color: "#0d3a45" }}
-            >
-              {name}
-            </motion.h1>
+            {/* interactive particle name — same scatter effect as the dark home,
+                theme-aware (dark indigo/violet tones for the light universe) */}
+            <h1 className="sr-only">{name}</h1>
+            {reduced ? (
+              <span
+                className="mt-8 block text-[16vw] font-black leading-[0.85] tracking-tight md:text-[12rem]"
+                style={{ color: "#0d3a45" }}
+              >
+                {name}
+              </span>
+            ) : (
+              <div aria-hidden className="relative mt-6 h-[20vw] w-full max-w-3xl md:h-[13rem]">
+                <ParticleName text={name} />
+              </div>
+            )}
 
             <motion.p
               initial={reduced ? false : { opacity: 0, y: 30 }}
@@ -475,6 +482,66 @@ export default function DayHome({ content }: { content?: HeroContent }) {
           </div>
         </section>
 
+        {/* ZONES OF THE DIVE */}
+        <section className="px-6 py-32 md:px-16">
+          <div className="mx-auto max-w-5xl">
+            <div className="day-reveal text-xs uppercase tracking-[0.4em] text-[#7fd4e0]">
+              Zones of the dive
+            </div>
+            <h2 className="day-reveal mt-6 text-4xl font-black leading-tight text-white md:text-6xl">
+              Every depth has its own life.
+            </h2>
+            <div className="mt-12 space-y-4">
+              {ZONES.map((z, i) => (
+                <div
+                  key={z.name}
+                  className={`day-reveal flex items-baseline gap-6 p-6 ${glassDark}`}
+                  data-parallax={i % 2 ? "-0.03" : "0.03"}
+                >
+                  <div className="w-24 shrink-0 text-2xl font-black text-[#7fd4e0]">{z.depth}</div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">{z.name}</h3>
+                    <p className="mt-1 text-sm text-white/60">{z.note}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CURRENT STATEMENT */}
+        <section className="flex min-h-screen items-center px-6 md:px-16">
+          <h2
+            className="day-reveal mx-auto max-w-4xl text-4xl font-black leading-[1.05] text-white md:text-7xl"
+            data-parallax="-0.05"
+          >
+            The current never stops.
+            <br />
+            Neither does the build.
+          </h2>
+        </section>
+
+        {/* INTERESTS */}
+        <section className="px-6 py-32 md:px-16">
+          <div className="mx-auto max-w-6xl">
+            <h2 className="day-reveal text-3xl font-black text-white md:text-5xl">
+              What I keep chasing
+            </h2>
+            <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {INTERESTS.map((x, i) => (
+                <div
+                  key={x.title}
+                  className={`day-reveal p-8 ${glassDark}`}
+                  data-parallax={i % 2 ? "-0.03" : "0.03"}
+                >
+                  <h3 className="text-lg font-bold text-white">{x.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/65">{x.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* THE DESCENT */}
         <section className="px-6 py-32 md:px-16">
           <div className="mx-auto max-w-5xl">
@@ -612,6 +679,21 @@ const TIMELINE = [
 ];
 
 const TECH = ["TypeScript", "React", "Next.js", "React Native", "Node.js", "Express", "MongoDB", "Redis", "Firebase", "Three.js", "GSAP", "Tailwind", "WebRTC", "Docker", "AWS", "CI/CD"];
+
+const ZONES = [
+  { name: "Surface", depth: "0m", note: "Where it begins — calm, sunlit, effortless." },
+  { name: "Sunlit shallows", depth: "20m", note: "Light in the water, movement everywhere." },
+  { name: "Coral garden", depth: "60m", note: "Colour and life — the busy, beautiful middle." },
+  { name: "Twilight", depth: "300m", note: "Quieter, cooler, built to endure." },
+  { name: "The deep", depth: "1000m", note: "Where only the essential glows." },
+];
+
+const INTERESTS = [
+  { title: "Shaders & 3D", desc: "GLSL, R3F and real-time worlds like this one." },
+  { title: "Realtime systems", desc: "WebRTC, sockets and low-latency pipelines." },
+  { title: "DX & tooling", desc: "Clean architecture teams actually enjoy shipping in." },
+  { title: "Performance", desc: "Chasing a steady 60fps everywhere it matters." },
+];
 
 const DESCENT = [
   { depth: "300m", title: "Reliability", desc: "Monitoring, retries and graceful failure so nothing ever goes dark." },

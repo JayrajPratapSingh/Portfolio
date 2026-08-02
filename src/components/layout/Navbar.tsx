@@ -10,7 +10,6 @@ import { Download } from "lucide-react";
 
 import { navItems } from "@/data/nav";
 import { cn } from "@/lib/cn";
-import { useScroll } from "@/hooks/useScroll";
 import NavBackground from "./NavBackground";
 import NavAdmin from "./NavAdmin";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -21,19 +20,17 @@ const GITHUB = "https://github.com/JayrajPratapSingh";
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { direction, atTop } = useScroll();
 
   const isActive = (path: string) =>
     path === "/" ? pathname === "/" : pathname.startsWith(path);
 
-  // hide when scrolling down (unless at top or the mobile drawer is open)
-  const hidden = direction === "down" && !atTop && !open;
-
+  // Header stays visible at all times (no scroll-hide) so it never gets stuck
+  // off-screen under smooth-scroll.
   return (
     <motion.nav
       aria-label="Primary"
       initial={{ y: -120, opacity: 0 }}
-      animate={{ y: hidden ? -120 : 0, opacity: 1 }}
+      animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 260, damping: 30 }}
       className="fixed left-1/2 top-4 z-[999] w-[95%] -translate-x-1/2 md:w-[92%] lg:w-[90%]"
     >
