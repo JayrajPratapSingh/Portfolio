@@ -66,11 +66,22 @@ export default function ParticleHeading({
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
 
-      const maxChars = Math.max(...lines.map((l) => l.length), 1);
-      let fontSize = Math.min((canvas.height / lines.length) * 0.78, canvas.width / (maxChars * 0.6));
-      fontSize = Math.max(24 * dpr, Math.min(fontSize, 200 * dpr));
+      const pad = Math.round(8 * dpr);
+      const avail = Math.max(1, canvas.width - pad * 2);
+      const setFont = (s: number) => {
+        ctx.font = `bold ${s}px Arial, Helvetica, sans-serif`;
+      };
+      // Start from a height-based size, then shrink to the *measured* width so
+      // the last letter (e.g. the "H" in SINGH) never clips off the right edge.
+      let fontSize = Math.max(24 * dpr, Math.min((canvas.height / lines.length) * 0.78, 200 * dpr));
+      setFont(fontSize);
+      let widest = 1;
+      for (const l of lines) widest = Math.max(widest, ctx.measureText(l).width);
+      if (widest > avail) {
+        fontSize = Math.max(12 * dpr, fontSize * (avail / widest));
+        setFont(fontSize);
+      }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
       ctx.textBaseline = "middle";
       ctx.textAlign = align;
       ctx.fillStyle = "#fff";
@@ -78,7 +89,7 @@ export default function ParticleHeading({
       const lineH = fontSize * 1.04;
       const totalH = lines.length * lineH;
       const y0 = (canvas.height - totalH) / 2 + lineH / 2;
-      const xAnchor = align === "center" ? canvas.width / 2 : Math.round(4 * dpr);
+      const xAnchor = align === "center" ? canvas.width / 2 : pad;
       lines.forEach((line, i) => ctx.fillText(line, xAnchor, y0 + i * lineH));
 
       const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;

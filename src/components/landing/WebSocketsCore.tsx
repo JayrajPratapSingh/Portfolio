@@ -3,9 +3,9 @@
 import {
   Float,
   Line,
-  Sparkles,
-  Text
+  Sparkles
 } from "@react-three/drei";
+import SpriteLabel from "./SpriteLabel";
 
 import {
   useFrame
@@ -266,19 +266,9 @@ Math.PI*2
 )}
 
 
-<Text
-fontSize={0.35}
-color="white"
-position={[
-0,
--1.2,
-0
-]}
->
-
+<SpriteLabel fontSize={0.35} color="white" position={[0, -1.2, 0]}>
 WS
-
-</Text>
+</SpriteLabel>
 
 
 <Sparkles

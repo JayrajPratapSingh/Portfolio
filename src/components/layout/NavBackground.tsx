@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { cn } from "@/lib/cn";
 
 const NavScene = dynamic(() => import("./NavScene"), { ssr: false });
 
@@ -25,6 +26,15 @@ export default function NavBackground() {
       aria-hidden
       className="pointer-events-none absolute inset-0 overflow-hidden rounded-full"
     >
+      {/* animated gradient wash — visible in BOTH themes */}
+      <div
+        className={cn(
+          "gradient-pan absolute inset-0 rounded-full opacity-50 dark:opacity-60",
+          "bg-[linear-gradient(110deg,rgba(99,102,241,0.28),rgba(168,85,247,0.18),rgba(56,189,248,0.24),rgba(99,102,241,0.28))]",
+          "dark:bg-[linear-gradient(110deg,rgba(34,211,238,0.22),rgba(168,85,247,0.2),rgba(59,130,246,0.24),rgba(34,211,238,0.22))]",
+        )}
+      />
+
       {/* Three.js waveform */}
       {mounted && !reduced && (
         <div className="absolute inset-0 opacity-70">

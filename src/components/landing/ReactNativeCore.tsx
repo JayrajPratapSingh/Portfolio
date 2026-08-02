@@ -3,9 +3,9 @@
 import {
   Float,
   Line,
-  Text,
   Sparkles
 } from "@react-three/drei";
+import SpriteLabel from "./SpriteLabel";
 
 import {
   useFrame
@@ -245,18 +245,9 @@ export default function ReactNativeCore(){
 
         {/* RN text */}
 
-        <Text
-          fontSize={.55}
-          color="#61DAFB"
-          position={[
-            0,
-            -1.6,
-            0
-          ]}
-          anchorX="center"
-        >
+        <SpriteLabel fontSize={0.55} color="#61DAFB" position={[0, -1.6, 0]}>
           RN
-        </Text>
+        </SpriteLabel>
 
 
         {particles.map(

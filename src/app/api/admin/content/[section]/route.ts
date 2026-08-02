@@ -5,6 +5,9 @@ import { getAuthUser } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import Content from "@/models/Content";
 
+// Never statically cache CMS reads — the dashboard must reflect edits instantly.
+export const dynamic = "force-dynamic";
+
 type Ctx = { params: Promise<{ section: string }> };
 
 function assertSection(section: string) {

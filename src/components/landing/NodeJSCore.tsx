@@ -3,9 +3,9 @@
 import {
   Float,
   Line,
-  Text,
   Sparkles
 } from "@react-three/drei";
+import SpriteLabel from "./SpriteLabel";
 
 import {
   useFrame
@@ -236,21 +236,9 @@ export default function NodeJSCore(){
 
         {/* center text */}
 
-        <Text
-          fontSize={.95}
-          color="#7DFA4E"
-          position={[
-            0,
-            0,
-            .25
-          ]}
-          anchorX="center"
-          anchorY="middle"
-        >
-
+        <SpriteLabel fontSize={0.95} color="#7DFA4E" position={[0, 0, 0.25]}>
           JS
-
-        </Text>
+        </SpriteLabel>
 
 
         {/* orbit particles */}

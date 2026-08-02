@@ -39,7 +39,7 @@ export function DashHeader({
         <button
           type="button"
           onClick={onReset}
-          className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
+          className="btn-3d inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
         >
           <RotateCcw size={15} /> Reset
         </button>
@@ -91,7 +91,7 @@ export function SaveButton({ saving, label = "Save Changes" }: { saving: boolean
     <button
       type="submit"
       disabled={saving}
-      className="inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-8 py-3.5 font-bold text-black transition-colors hover:bg-cyan-300 disabled:opacity-60"
+      className="btn-3d inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-8 py-3.5 font-bold text-black transition-colors hover:bg-cyan-300 disabled:opacity-60"
     >
       {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
       {label}
@@ -137,7 +137,7 @@ export function StringListEditor({
           <button
             type="button"
             onClick={() => remove(i)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10"
+            className="btn-3d grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10"
           >
             <Trash2 size={15} />
           </button>
@@ -146,7 +146,7 @@ export function StringListEditor({
       <button
         type="button"
         onClick={add}
-        className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/20 px-3 py-2 text-sm text-cyan-300 hover:bg-cyan-400/5"
+        className="btn-3d inline-flex items-center gap-2 rounded-xl border border-cyan-400/20 px-3 py-2 text-sm text-cyan-300 hover:bg-cyan-400/5"
       >
         <Plus size={15} /> {addLabel}
       </button>
@@ -173,7 +173,7 @@ export function RepeaterItem({
         <button
           type="button"
           onClick={onRemove}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/20 px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-500/10"
+          className="btn-3d inline-flex items-center gap-1.5 rounded-lg border border-red-500/20 px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-500/10"
         >
           <Trash2 size={13} /> Remove
         </button>
@@ -188,7 +188,7 @@ export function AddButton({ onClick, label }: { onClick: () => void; label: stri
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/20 px-3 py-2 text-sm text-cyan-300 hover:bg-cyan-400/5"
+      className="btn-3d inline-flex items-center gap-2 rounded-xl border border-cyan-400/20 px-3 py-2 text-sm text-cyan-300 hover:bg-cyan-400/5"
     >
       <Plus size={15} /> {label}
     </button>

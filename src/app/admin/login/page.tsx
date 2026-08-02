@@ -219,7 +219,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 py-3 font-bold text-white transition-transform hover:-translate-y-0.5 disabled:opacity-50 dark:from-cyan-400 dark:to-cyan-300 dark:text-black"
+              className="btn-3d w-full rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 py-3 font-bold text-white disabled:opacity-50 dark:from-cyan-400 dark:to-cyan-300 dark:text-black"
             >
               {isSubmitting ? "AUTHENTICATING…" : "ENTER"}
             </button>

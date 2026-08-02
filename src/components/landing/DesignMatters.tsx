@@ -44,27 +44,31 @@ export default function DesignMatters() {
   return (
     <section
       id="section2"
-      className="bg-gradient-to-b from-background via-[#eaeefc] to-background py-20 text-center text-slate-900 dark:via-[#0a0a16] dark:text-white"
+      className="overflow-x-hidden bg-gradient-to-b from-background via-[#eaeefc] to-background py-20 text-center text-slate-900 dark:via-[#0a0a16] dark:text-white"
       style={{
         perspective: "1000px",
       }}
     >
-      {words.map((word) => (
-        <div key={word} className="flipText">
-          <h1
-            className={`
-            ${anton.className}
-            text-[22vw]
-            leading-[0.9]
-            font-black
-            uppercase
-            `}
-            style={{ letterSpacing: "-0.035em" }}
-          >
-            {word}
-          </h1>
-        </div>
-      ))}
+      {words.map((word) => {
+        // Size each word to the viewport so long words (e.g. DEVELOPMENT) never
+        // overflow and clip their last letter. Cap at 22vw for short words.
+        const fontVw = Math.min(22, 185 / word.length);
+        return (
+          <div key={word} className="flipText">
+            <h1
+              className={`
+              ${anton.className}
+              leading-[0.9]
+              font-black
+              uppercase
+              `}
+              style={{ letterSpacing: "-0.035em", fontSize: `${fontVw}vw` }}
+            >
+              {word}
+            </h1>
+          </div>
+        );
+      })}
 
       {/* logo section */}
      <div className="flex justify-center items-center scale-75 mt-10">

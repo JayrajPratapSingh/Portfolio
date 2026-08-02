@@ -30,6 +30,10 @@
   --ring: rgba(99, 102, 241, 0.45);
 
   --shadow-soft: 0 10px 30px -12px rgba(79, 70, 229, 0.25);
+
+  /* honey cursor (light) */
+  --cursor-dot: #6366f1;
+  --cursor-glow: rgba(99, 102, 241, 0.55);
 }
 
 /* ================================================================== */
@@ -56,6 +60,10 @@
   --ring: rgba(34, 211, 238, 0.5);
 
   --shadow-soft: 0 0 40px rgba(34, 211, 238, 0.12);
+
+  /* honey cursor (dark) */
+  --cursor-dot: #22d3ee;
+  --cursor-glow: rgba(34, 211, 238, 0.55);
 }
 
 /* Expose tokens as Tailwind color/font utilities (bg-background, etc.) */
@@ -98,6 +106,75 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/*  HONEY CURSOR — a glowing orb that trails the pointer with lag      */
+/* ------------------------------------------------------------------ */
+.honey-glow,
+.honey-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  will-change: transform;
+}
+.honey-glow {
+  width: 42px;
+  height: 42px;
+  background: radial-gradient(circle, var(--cursor-glow) 0%, transparent 70%);
+  filter: blur(4px);
+  transition: opacity 0.3s ease;
+}
+.honey-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--cursor-dot);
+  box-shadow: 0 0 10px var(--cursor-glow);
+  transition: width 0.2s ease, height 0.2s ease;
+}
+.cursor-press .honey-glow {
+  opacity: 0.55;
+}
+/* No custom cursor on touch / coarse-pointer / reduced-motion. */
+@media (hover: none), (pointer: coarse) {
+  .honey-cursor {
+    display: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .honey-cursor {
+    display: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Animated gradient wash — used by nav + footer in BOTH themes       */
+/* ------------------------------------------------------------------ */
+@keyframes gradient-pan {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+.gradient-pan {
+  background-size: 200% 200%;
+  animation: gradient-pan 12s ease infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Day-mode legibility — keep headings readable over the live scene   */
+/* ------------------------------------------------------------------ */
+.day-root h1,
+.day-root h2,
+.day-root blockquote {
+  text-shadow: 0 2px 22px rgba(0, 0, 0, 0.32);
 }
 
 /* ------------------------------------------------------------------ */

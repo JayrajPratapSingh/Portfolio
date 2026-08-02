@@ -3,10 +3,10 @@
 import {
   Float,
   Sparkles,
-  Text,
   Line,
   MeshDistortMaterial,
 } from "@react-three/drei";
+import SpriteLabel from "./SpriteLabel";
 
 import { useFrame } from "@react-three/fiber";
 
@@ -89,13 +89,9 @@ function TechNode({
 
       {/* label */}
 
-      <Text
-        fontSize={0.12}
-        position={[0, 0.55, 0]}
-        color={color}
-      >
+      <SpriteLabel fontSize={0.12} position={[0, 0.55, 0]} color={color}>
         {label}
-      </Text>
+      </SpriteLabel>
     </group>
   );
 }

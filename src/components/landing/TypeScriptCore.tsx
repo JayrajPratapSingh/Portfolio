@@ -3,9 +3,9 @@
 import {
   Float,
   Sparkles,
-  Text,
   Line
 } from "@react-three/drei";
+import SpriteLabel from "./SpriteLabel";
 
 import {
   useFrame
@@ -232,21 +232,9 @@ emissiveIntensity={0.2}
 
 {/* TS */}
 
-<Text
-fontSize={0.65}
-color="#ffffff"
-position={[
-0,
-0,
-.75
-]}
-anchorX="center"
-anchorY="middle"
->
-
+<SpriteLabel fontSize={0.65} color="#ffffff" position={[0, 0, 0.75]}>
 TS
-
-</Text>
+</SpriteLabel>
 
 
 {/* orbit cubes */}

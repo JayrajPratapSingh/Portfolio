@@ -2,24 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
- * Accessible dark/light switch.
- * Renders a neutral placeholder until mounted to avoid a hydration mismatch
- * (server has no idea which theme resolved). Styled with design tokens so it
- * looks correct in both the cosmic-dark and the soft-light universes.
+ * Day / night switch. A little sky in a pill: blue with drifting clouds by day,
+ * deep indigo with stars by night, and a sun/moon knob that slides across on a
+ * spring. Renders a neutral (day) state until mounted to avoid a hydration
+ * mismatch. Works in both the light and cosmic-dark universes.
  */
 export default function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-
   useEffect(() => setMounted(true), []);
-
-  // Before mount the server/client can't agree on the theme, so keep every
-  // theme-derived value neutral until `mounted` to avoid a hydration mismatch.
   const isDark = mounted && resolvedTheme === "dark";
 
   return (
@@ -35,27 +31,60 @@ export default function ThemeToggle({ className }: { className?: string }) {
       }
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className={cn(
-        "relative grid h-10 w-10 place-items-center rounded-full",
-        "border border-[var(--border)] bg-[var(--glass-bg)] backdrop-blur-xl",
-        "text-foreground/80 transition-colors hover:text-foreground",
+        "relative h-9 w-16 shrink-0 overflow-hidden rounded-full border transition-colors duration-500",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
+        isDark
+          ? "border-cyan-400/30 bg-gradient-to-b from-[#0b1026] to-[#050418]"
+          : "border-amber-300/60 bg-gradient-to-b from-[#8ec5ff] to-[#dff0ff]",
         className,
       )}
     >
-      <AnimatePresence mode="wait" initial={false}>
-        {mounted && (
-          <motion.span
-            key={isDark ? "moon" : "sun"}
-            initial={{ y: 8, opacity: 0, rotate: -30 }}
-            animate={{ y: 0, opacity: 1, rotate: 0 }}
-            exit={{ y: -8, opacity: 0, rotate: 30 }}
-            transition={{ duration: 0.2 }}
-            className="grid place-items-center"
-          >
-            {isDark ? <Moon size={17} /> : <Sun size={17} />}
-          </motion.span>
+      {/* stars — night */}
+      <span
+        className={cn(
+          "absolute inset-0 transition-opacity duration-500",
+          isDark ? "opacity-100" : "opacity-0",
         )}
-      </AnimatePresence>
+      >
+        <span className="absolute left-2 top-2 h-[2px] w-[2px] rounded-full bg-white" />
+        <span className="absolute left-[18px] top-[22px] h-[2px] w-[2px] rounded-full bg-white/80" />
+        <span className="absolute left-[26px] top-[9px] h-[3px] w-[3px] rounded-full bg-white" />
+        <span className="absolute left-[9px] top-[24px] h-[2px] w-[2px] rounded-full bg-white/70" />
+      </span>
+
+      {/* clouds — day */}
+      <span
+        className={cn(
+          "absolute inset-0 transition-opacity duration-500",
+          isDark ? "opacity-0" : "opacity-100",
+        )}
+      >
+        <span className="absolute right-[8px] top-[7px] h-2 w-4 rounded-full bg-white/85 blur-[1px]" />
+        <span className="absolute right-[18px] bottom-[6px] h-1.5 w-3 rounded-full bg-white/70 blur-[1px]" />
+      </span>
+
+      {/* sun / moon knob */}
+      <motion.span
+        initial={false}
+        animate={{ x: isDark ? 32 : 4 }}
+        transition={{ type: "spring", stiffness: 500, damping: 32 }}
+        className="absolute top-1 left-0 grid h-7 w-7 place-items-center"
+      >
+        <motion.span
+          key={isDark ? "moon" : "sun"}
+          initial={{ scale: 0.4, opacity: 0, rotate: -40 }}
+          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+          transition={{ duration: 0.35 }}
+          className={cn(
+            "grid h-7 w-7 place-items-center rounded-full",
+            isDark
+              ? "bg-gradient-to-b from-slate-100 to-slate-400 text-slate-700 shadow-[0_0_10px_rgba(226,232,240,0.5)]"
+              : "bg-gradient-to-b from-amber-200 to-amber-500 text-amber-900 shadow-[0_0_14px_rgba(251,191,36,0.75)]",
+          )}
+        >
+          {isDark ? <Moon size={14} /> : <Sun size={15} />}
+        </motion.span>
+      </motion.span>
     </button>
   );
 }

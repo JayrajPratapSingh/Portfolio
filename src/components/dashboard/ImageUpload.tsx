@@ -68,14 +68,14 @@ export default function ImageUpload({
               type="button"
               onClick={pick}
               disabled={uploading}
-              className="rounded-lg bg-cyan-400 px-3 py-1.5 text-xs font-semibold text-black hover:bg-cyan-300"
+              className="btn-3d rounded-lg bg-cyan-400 px-3 py-1.5 text-xs font-semibold text-black hover:bg-cyan-300"
             >
               Replace
             </button>
             <button
               type="button"
               onClick={() => onChange("", "")}
-              className="grid h-8 w-8 place-items-center rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/20"
+              className="btn-3d grid h-8 w-8 place-items-center rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/20"
             >
               <X size={15} />
             </button>

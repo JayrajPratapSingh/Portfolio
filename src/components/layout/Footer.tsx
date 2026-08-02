@@ -62,6 +62,12 @@ export default function Footer() {
 
   return (
     <footer className="relative overflow-hidden border-t border-[var(--border)] bg-[var(--surface)] px-6 pb-10 pt-20 text-foreground md:px-16 dark:bg-[#04010f]">
+      {/* animated gradient top-line — both themes */}
+      <div
+        aria-hidden
+        className="gradient-pan pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-[linear-gradient(90deg,#6366f1,#38bdf8,#a855f7,#6366f1)] dark:bg-[linear-gradient(90deg,#22d3ee,#3b82f6,#a855f7,#22d3ee)]"
+      />
+
       {/* animated 3D backdrop */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         {mounted && <FooterBackground isLight={isLight} />}

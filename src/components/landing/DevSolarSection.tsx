@@ -6,10 +6,10 @@ import {
   Float,
   Stars,
   Billboard,
-  Text,
   Instances,
   Instance,
 } from "@react-three/drei";
+import SpriteLabel from "./SpriteLabel";
 
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
@@ -125,13 +125,9 @@ function TechPlanet({ name, angle, radius }: any) {
         </group>
 
         <Billboard position={[0, -1.9, 0]}>
-          <Text
-            fontSize={0.17}
-            color="#d4d4d8"
-            anchorX="center"
-          >
+          <SpriteLabel fontSize={0.17} color="#d4d4d8">
             {name}
-          </Text>
+          </SpriteLabel>
         </Billboard>
       </Float>
     </group>

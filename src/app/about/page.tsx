@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTheme } from "next-themes";
 import {
   Rocket,
   Globe,
@@ -37,6 +38,15 @@ export default function AboutPage() {
   const reduced = useReducedMotion();
   const [openExp, setOpenExp] = useState<number | null>(0);
   const content = usePublicContent<AboutContent>("about", about);
+
+  // Theme-aware portrait: bright office shot by day, moody studio shot by night.
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isLight = mounted && resolvedTheme === "light";
+  const portrait = isLight
+    ? "/images/profile_lightmode.png"
+    : "/images/profile_darkmode.png";
 
   const reveal = (delay = 0) =>
     reduced
@@ -103,20 +113,21 @@ export default function AboutPage() {
               aria-hidden
               className="absolute -inset-8 -z-10 rounded-full bg-gradient-to-tr from-indigo-500/40 via-sky-400/25 to-violet-500/40 blur-[80px] dark:from-cyan-500/30 dark:via-blue-500/25 dark:to-purple-500/35"
             />
-            {/* dark frame so the moody portrait's face floats out of the black */}
-            <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[#07070e] p-2 shadow-[0_40px_100px_-30px_rgba(0,0,0,0.8)] ring-1 ring-white/10 dark:ring-cyan-400/20">
-              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[24px] bg-black">
+            {/* framed portrait — light glass frame by day, deep frame by night */}
+            <div className="relative overflow-hidden rounded-[32px] border border-black/5 bg-white/70 p-2 shadow-[0_40px_100px_-30px_rgba(30,27,75,0.45)] ring-1 ring-black/5 backdrop-blur-xl dark:border-white/10 dark:bg-[#07070e] dark:shadow-[0_40px_100px_-30px_rgba(0,0,0,0.8)] dark:ring-cyan-400/20">
+              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[24px] bg-[var(--surface-2)] dark:bg-black">
                 <Image
-                  src="/images/jairajpic.jpeg"
+                  key={portrait}
+                  src={portrait}
                   alt="Jayraj Pratap Singh"
                   fill
                   sizes="(max-width: 1024px) 90vw, 420px"
-                  className="object-cover object-[68%_36%] brightness-[1.18] contrast-[1.12]"
+                  className="object-cover object-[50%_20%]"
                   priority
                 />
                 {/* accent rim light */}
-                <div className="pointer-events-none absolute inset-0 mix-blend-screen bg-gradient-to-tr from-transparent via-transparent to-indigo-400/25 dark:to-cyan-400/25" />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent" />
+                <div className="pointer-events-none absolute inset-0 mix-blend-screen bg-gradient-to-tr from-transparent via-transparent to-indigo-400/20 dark:to-cyan-400/25" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/20 to-transparent dark:from-black/40" />
               </div>
             </div>
             {/* floating accent chip */}
@@ -168,8 +179,8 @@ export default function AboutPage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {content.expertise.map((card, i) => (
               <motion.div
-                {...reveal(i * 0.08)}
                 key={card.key}
+                {...reveal(i * 0.08)}
                 whileHover={reduced ? undefined : { y: -8 }}
                 className={cn("rounded-[28px] p-8", glass)}
               >
@@ -197,7 +208,7 @@ export default function AboutPage() {
             {content.experiences.map((exp, i) => {
               const open = openExp === i;
               return (
-                <motion.div {...reveal(i * 0.05)} key={exp.company} className="relative">
+                <motion.div key={exp.company} {...reveal(i * 0.05)} className="relative">
                   <span className="absolute -left-[26px] top-6 h-3.5 w-3.5 rounded-full bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.7)] dark:bg-cyan-400 dark:shadow-[0_0_20px_rgba(34,211,238,0.8)]" />
                   <button
                     onClick={() => setOpenExp(open ? null : i)}
