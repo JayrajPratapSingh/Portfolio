@@ -253,9 +253,12 @@ function CameraRig() {
     if (fog) {
       sampleBiome(s, fogCol);
       fog.color.copy(fogCol);
-      const murk = THREE.MathUtils.smoothstep(s, 0.16, 1.0);
-      fog.near = THREE.MathUtils.lerp(20, 4, murk);
-      fog.far = THREE.MathUtils.lerp(72, 24, murk);
+      // murk peaks mid-dive (twilight), then eases so the coral metropolis at the
+      // bottom reads as a dense, lit reef rather than fogging out to black.
+      const murk =
+        THREE.MathUtils.smoothstep(s, 0.16, 0.72) * (1 - 0.35 * THREE.MathUtils.smoothstep(s, 0.82, 1.0));
+      fog.near = THREE.MathUtils.lerp(20, 7, murk);
+      fog.far = THREE.MathUtils.lerp(72, 30, murk);
     }
   });
   return null;
@@ -269,6 +272,12 @@ export default function WaterWorld() {
       camera={{ position: [0, 2.3, 7.5], fov: 46, near: 0.1, far: 200 }}
     >
       <fog attach="fog" args={["#e9dccb", 22, 70]} />
+      {/* underwater lighting: bright blue-green surface glow from above, dark
+          seabed fill, a soft sun key, and a low ambient floor. Gives the reef
+          real form (MeshLambert) instead of the old flat unlit look. */}
+      <hemisphereLight color="#cfeef2" groundColor="#0a2f3a" intensity={0.75} />
+      <directionalLight position={[-10, 24, 4]} intensity={0.55} color="#eaf7ff" />
+      <ambientLight intensity={0.28} color="#7fb8bf" />
       <DaySun />
       <Water />
       <Underwater />

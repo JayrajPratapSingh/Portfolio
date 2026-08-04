@@ -6,17 +6,18 @@ import * as THREE from "three";
  * sunlit shallows → turquoise coral garden → twilight → the deep). Shared by the
  * fog (WaterWorld) and the underwater backdrop so both stay in sync.
  */
-// 7-environment expedition: each stop is the water colour of a scene the camera
+// 8-ecosystem expedition: each stop is the water colour of a scene the camera
 // travels through, so the whole world grades continuously biome to biome.
 const STOPS: [number, THREE.Color][] = [
   [0.0, new THREE.Color("#dfeee7")], // just below the surface — bright
-  [0.08, new THREE.Color("#79cfcf")], // 1 · shallow tropical (turquoise)
-  [0.22, new THREE.Color("#3caebd")], // 2 · coral kingdom (vivid aqua)
-  [0.38, new THREE.Color("#3f8f74")], // 3 · kelp forest (green-gold)
-  [0.52, new THREE.Color("#2c6f88")], // 4 · ancient ruins (steel blue)
-  [0.68, new THREE.Color("#123f5a")], // 5 · glowing ecosystem (deep blue-cyan)
-  [0.82, new THREE.Color("#081f36")], // 6 · canyon (navy)
-  [1.0, new THREE.Color("#020c15")], // 7 · abyss (near-black)
+  [0.09, new THREE.Color("#8fd8d2")], // 1 · shallow tropical (crystal turquoise)
+  [0.22, new THREE.Color("#40b6c2")], // 2 · coral garden (vivid aqua)
+  [0.35, new THREE.Color("#2f92a6")], // 3 · coral canyon (teal)
+  [0.48, new THREE.Color("#33887a")], // 4 · kelp forest (green-gold)
+  [0.6, new THREE.Color("#237089")], // 5 · open reef valley (ocean blue)
+  [0.72, new THREE.Color("#164f6e")], // 6 · underwater archways (deep blue)
+  [0.85, new THREE.Color("#0d3a58")], // 7 · deep reef (bioluminescent blue)
+  [1.0, new THREE.Color("#0b3348")], // 8 · coral metropolis (lit deep teal)
 ];
 
 /** Writes the biome colour at scroll progress `s` (0..1) into `out`. */

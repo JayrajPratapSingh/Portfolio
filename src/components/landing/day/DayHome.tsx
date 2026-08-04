@@ -147,6 +147,9 @@ export default function DayHome({ content }: { content?: HeroContent }) {
       {/* depth / temperature HUD (fades in on the dive) */}
       {!reduced && <DepthHUD />}
 
+      {/* documentary-style ecosystem nameplate, synced to dive depth */}
+      {!reduced && <BiomeNameplate />}
+
       {/* readability lift near the top so the hero copy stays crisp */}
       <div
         aria-hidden
@@ -238,6 +241,10 @@ export default function DayHome({ content }: { content?: HeroContent }) {
             </div>
           </div>
         </section>
+
+        {/* THE DESCENT — one full-height panel per ecosystem, so the dive is long
+            and every biome gets real scroll time as the camera sinks past it. */}
+        <DiveLog />
 
         {/* PHILOSOPHY */}
         <section className="px-6 py-32 md:px-16">
@@ -648,6 +655,89 @@ function DepthHUD() {
       <div className="mt-1 flex items-center gap-2">
         <span className="text-[#7fd4e0]">TEMP</span>
         <span ref={temp}>22.0</span> °C
+      </div>
+    </div>
+  );
+}
+
+/* The eight ecosystems, ordered by dive depth. `range` is the scroll-progress
+   window each one owns — shared by the nameplate HUD and the descent panels. */
+const BIOMES: { range: [number, number]; name: string; depth: string; note: string }[] = [
+  { range: [0.0, 0.11], name: "Sunlit Shallows", depth: "0–15 m", note: "Crystal tropical water, waves breaking overhead. Clouds of sardines and anchovies flicker through shafts of light, over sea grass and soft green algae." },
+  { range: [0.11, 0.24], name: "Coral Garden", depth: "15–40 m", note: "Brain, table, staghorn, tube coral and sea fans in every colour — patrolled by clownfish, blue tang, damselfish and darting wrasse." },
+  { range: [0.24, 0.4], name: "Coral Canyon", depth: "40–120 m", note: "Sheer reef walls fall away into the blue. A river of hundreds of fish pours through the gap, past sponges, sea stars and sea cucumbers." },
+  { range: [0.4, 0.52], name: "Kelp Forest", depth: "120–200 m", note: "Tall kelp sways in the current. Seahorses cling to the fronds while crabs and shrimp work the shadows on the reef floor." },
+  { range: [0.52, 0.64], name: "Open Reef Valley", depth: "200–320 m", note: "A wide, calm basin. Sea turtles and manta rays glide over coral islands and natural rock bridges without a single straight line in sight." },
+  { range: [0.64, 0.76], name: "Underwater Archways", depth: "320–500 m", note: "Great natural stone arches, thick with coral. Light and fish pour through the openings as the camera swims beneath them." },
+  { range: [0.76, 0.88], name: "Deep Reef", depth: "500–900 m", note: "The blue deepens to indigo. Bioluminescent plankton and transparent jellyfish drift, glowing faintly in the soft dark." },
+  { range: [0.88, 1.0], name: "Coral Metropolis", depth: "900–1200 m", note: "The richest reef of all — every surface alive with coral and fish, the whole world lit from within. The dive never really ends." },
+];
+
+const scrim =
+  "rounded-[28px] border border-white/15 bg-black/25 p-8 backdrop-blur-md md:p-12";
+
+/* The descent: one full-height panel per ecosystem. Purely additive scroll length
+   so the camera has far longer to sink through each biome. */
+function DiveLog() {
+  return (
+    <>
+      {BIOMES.map((b, i) => (
+        <section key={b.name} className="flex min-h-screen items-center px-6 md:px-16">
+          <div className="mx-auto w-full max-w-4xl">
+            <div className={`day-reveal ${scrim}`} data-parallax={i % 2 ? "-0.04" : "0.04"}>
+              <div className="flex items-center gap-4">
+                <span className="font-mono text-sm text-[#7fd4e0]">{String(i + 1).padStart(2, "0")}</span>
+                <span className="h-px flex-1 bg-white/15" />
+                <span className="font-mono text-xs text-white/60">{b.depth}</span>
+              </div>
+              <h2 className="mt-6 text-4xl font-black leading-[1.03] text-white md:text-7xl">{b.name}</h2>
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/80">{b.note}</p>
+            </div>
+          </div>
+        </section>
+      ))}
+    </>
+  );
+}
+
+/* Documentary nameplate — names the ecosystem you're currently diving through,
+   driven straight off the shared scroll signal (no React re-renders). */
+function BiomeNameplate() {
+  const wrap = useRef<HTMLDivElement>(null);
+  const nameEl = useRef<HTMLSpanElement>(null);
+  const depthEl = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    let raf = 0;
+    let cur = -1;
+    const loop = () => {
+      const p = dayScroll.progress;
+      let idx = BIOMES.findIndex((b) => p <= b.range[1]);
+      if (idx < 0) idx = BIOMES.length - 1;
+      if (wrap.current)
+        wrap.current.style.opacity = String(Math.min(1, Math.max(0, (p - 0.03) / 0.06)));
+      if (idx !== cur) {
+        cur = idx;
+        if (nameEl.current) nameEl.current.textContent = BIOMES[idx].name;
+        if (depthEl.current) depthEl.current.textContent = BIOMES[idx].depth;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return (
+    <div
+      ref={wrap}
+      aria-hidden
+      style={{ opacity: 0 }}
+      className="pointer-events-none fixed bottom-6 left-6 z-[20] rounded-2xl border border-white/15 bg-black/30 px-5 py-3 backdrop-blur-md"
+    >
+      <div className="text-[10px] uppercase tracking-[0.3em] text-[#7fd4e0]">Ecosystem</div>
+      <div className="mt-1 text-sm font-bold text-white md:text-base">
+        <span ref={nameEl}>Sunlit Shallows</span>
+      </div>
+      <div className="mt-0.5 font-mono text-[11px] text-white/70">
+        <span ref={depthEl}>0–15 m</span>
       </div>
     </div>
   );

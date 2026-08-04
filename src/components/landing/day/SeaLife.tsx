@@ -120,10 +120,66 @@ function makeFishGeometry(back: string, belly: string) {
   return mergeGeometries([body, caudal, dorsal, pecR, pecL, eyeR, eyeL])!;
 }
 
-/* Reusable unlit fish material with a tail-swim wiggle in the vertex shader
-   (tail sways most). Instancing-safe via onBeforeCompile. */
+/* ------------------------- underwater lighting -------------------------- *
+ * A shared time uniform (bumped once per frame by <ReefClock/>) and a caustic
+ * injector. The reef now uses lit materials (MeshLambert), and we add the moving
+ * light-cells of real underwater footage in the fragment stage — dancing across
+ * upward-facing surfaces — so coral, rock and fish read as shaded, not flat.  */
+const reefTime = { value: 0 };
+function ReefClock() {
+  useFrame((_, dt) => {
+    reefTime.value += Math.min(dt, 0.05);
+  });
+  return null;
+}
+
+const CAUSTIC_VARY = "varying vec3 vCausW;\nvarying float vCausUp;\n";
+const CAUSTIC_VERT = /* glsl */ `
+  vCausW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+  vCausUp = normal.y;
+`;
+const CAUSTIC_FRAG = /* glsl */ `
+  vec2 cUv = vCausW.xz * 0.5;
+  float cw = sin(cUv.x * 2.2 + uTime * 0.7) * sin(cUv.y * 2.2 - uTime * 0.55)
+           + 0.5 * sin((cUv.x + cUv.y) * 3.1 + uTime * 0.9);
+  float caus = smoothstep(0.35, 1.15, cw);
+  float upMask = smoothstep(-0.1, 0.6, vCausUp);
+  gl_FragColor.rgb += caus * upMask * uCaustic * vec3(0.42, 0.6, 0.54);
+`;
+
+/* Inject the caustic world-position + fragment highlight into a material's
+   compiled shaders (chains after any vertex displacement already added). */
+function injectCaustic(sh: THREE.WebGLProgramParametersWithUniforms, time: { value: number }, strength: number) {
+  sh.uniforms.uTime = time;
+  sh.uniforms.uCaustic = { value: strength };
+  sh.vertexShader = CAUSTIC_VARY + "uniform float uTime;\n" + sh.vertexShader.replace(
+    "#include <project_vertex>",
+    CAUSTIC_VERT + "\n#include <project_vertex>",
+  );
+  sh.fragmentShader =
+    CAUSTIC_VARY + "uniform float uTime;\nuniform float uCaustic;\n" +
+    sh.fragmentShader.replace("#include <fog_fragment>", CAUSTIC_FRAG + "\n#include <fog_fragment>");
+}
+
+/* Lit reef material for static bed geometry (coral, rock, sponges, shells…).
+   MeshLambert so real lights sculpt the form; vertex colours + instanceColor
+   still carry the hue; caustics ride on top. */
+function makeReefMaterial(opts?: { vertexColors?: boolean; side?: THREE.Side; caustic?: number }) {
+  const m = new THREE.MeshLambertMaterial({
+    vertexColors: opts?.vertexColors ?? true,
+    transparent: true,
+    opacity: 0,
+    fog: true,
+    side: opts?.side ?? THREE.FrontSide,
+  });
+  m.onBeforeCompile = (sh) => injectCaustic(sh, reefTime, opts?.caustic ?? 0.5);
+  return m;
+}
+
+/* Reusable fish material: MeshLambert so light catches the flank, with a
+   tail-swim wiggle in the vertex shader and a soft caustic sheen. */
 function makeSwimMaterial(uTime: { value: number }, wiggle = 0.22) {
-  const m = new THREE.MeshBasicMaterial({
+  const m = new THREE.MeshLambertMaterial({
     vertexColors: true,
     transparent: true,
     opacity: 0,
@@ -131,17 +187,16 @@ function makeSwimMaterial(uTime: { value: number }, wiggle = 0.22) {
     side: THREE.DoubleSide,
   });
   m.onBeforeCompile = (sh) => {
-    sh.uniforms.uTime = uTime;
     sh.uniforms.uWiggle = { value: wiggle };
-    sh.vertexShader =
-      "uniform float uTime;\nuniform float uWiggle;\n" +
-      sh.vertexShader.replace(
-        "#include <begin_vertex>",
-        `#include <begin_vertex>
+    sh.vertexShader = sh.vertexShader.replace(
+      "#include <begin_vertex>",
+      `#include <begin_vertex>
          float fph = instanceMatrix[3].x * 0.7 + instanceMatrix[3].z * 0.3;
          float famt = smoothstep(0.25, -1.6, position.x);
          transformed.z += sin(uTime * 3.2 + fph + position.x * 2.4) * famt * uWiggle;`,
-      );
+    );
+    sh.vertexShader = "uniform float uWiggle;\n" + sh.vertexShader;
+    injectCaustic(sh, uTime, 0.32);
   };
   return m;
 }
@@ -241,54 +296,10 @@ function makeRockGeometry() {
   return g;
 }
 
-/* A weathered stone gateway (two pillars + a broken lintel), top-lit and
-   speckled with coral patches — an ancient-ruins structure the camera passes. */
-function makeRuinGeometry() {
-  const hsh = (x: number, y: number, z: number) => {
-    const s = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453;
-    return s - Math.floor(s);
-  };
-  const boxes: THREE.BufferGeometry[] = [];
-  const add = (w: number, h: number, d: number, x: number, y: number, z: number) => {
-    const b = new THREE.BoxGeometry(w, h, d).toNonIndexed();
-    b.translate(x, y, z);
-    boxes.push(b);
-  };
-  add(0.9, 5.4, 0.9, -2.3, 2.7, 0); // left pillar
-  add(0.9, 5.4, 0.9, 2.3, 2.7, 0); // right pillar
-  add(5.7, 1.0, 1.0, 0, 5.7, 0); // lintel
-  add(1.6, 0.8, 0.9, -1.4, 6.2, 0); // broken block on top
-  const g = mergeGeometries(boxes)!;
-  g.computeVertexNormals();
-  const p = g.attributes.position;
-  const nn = g.attributes.normal;
-  const stone = new THREE.Color("#585d61");
-  const stone2 = new THREE.Color("#6a6255");
-  const coralA = new THREE.Color("#c96f4a");
-  const coralB = new THREE.Color("#5fae7d");
-  const c = new THREE.Color();
-  const col = new Float32Array(p.count * 3);
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i),
-      y = p.getY(i),
-      z = p.getZ(i);
-    const top = 0.55 + 0.45 * Math.max(0, nn.getY(i));
-    const n = hsh(x * 2, y * 2, z * 2);
-    c.copy(stone).lerp(stone2, hsh(x, y, z));
-    if (n > 0.8) c.lerp(coralA, 0.7);
-    else if (n > 0.68) c.lerp(coralB, 0.6);
-    c.multiplyScalar(top * (0.85 + n * 0.2));
-    col[i * 3] = c.r;
-    col[i * 3 + 1] = c.g;
-    col[i * 3 + 2] = c.b;
-  }
-  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  return g;
-}
-
-/* Reusable current-sway material for kelp/algae (bend scales with height uH). */
+/* Reusable current-sway material for kelp/algae (bend scales with height uH).
+   Lit (MeshLambert) + caustic so fronds catch the light and sway together. */
 function makeGrassMaterial(uTime: { value: number }, height: number, amp: number) {
-  const m = new THREE.MeshBasicMaterial({
+  const m = new THREE.MeshLambertMaterial({
     vertexColors: true,
     transparent: true,
     opacity: 0,
@@ -296,21 +307,20 @@ function makeGrassMaterial(uTime: { value: number }, height: number, amp: number
     fog: true,
   });
   m.onBeforeCompile = (sh) => {
-    sh.uniforms.uTime = uTime;
     sh.uniforms.uH = { value: height };
     sh.uniforms.uAmp = { value: amp };
-    sh.vertexShader =
-      "uniform float uTime;\nuniform float uH;\nuniform float uAmp;\n" +
-      sh.vertexShader.replace(
-        "#include <begin_vertex>",
-        `#include <begin_vertex>
+    sh.vertexShader = sh.vertexShader.replace(
+      "#include <begin_vertex>",
+      `#include <begin_vertex>
          float ph = instanceMatrix[3].x * 0.35 + instanceMatrix[3].z * 0.35;
          float h = clamp(position.y / uH, 0.0, 1.0);
          float bend = pow(h, 1.4);
          float sway = sin(uTime * 1.0 + ph) * 0.5 + sin(uTime * 2.1 + ph * 1.7) * 0.18;
          transformed.x += sway * bend * uAmp;
          transformed.z += cos(uTime * 0.8 + ph) * bend * uAmp * 0.6;`,
-      );
+    );
+    sh.vertexShader = "uniform float uH;\nuniform float uAmp;\n" + sh.vertexShader;
+    injectCaustic(sh, uTime, 0.4);
   };
   return m;
 }
@@ -379,40 +389,6 @@ function makeSnailGeometry() {
     const s = 0.55 + 0.45 * Math.max(0, nn.getY(i));
     cc.setXYZ(i, cc.getX(i) * s, cc.getY(i) * s, cc.getZ(i) * s);
   }
-  return g;
-}
-
-/* One half of a scalloped oyster shell: a flattened hemisphere with radial
-   ridges, cream/tan top-lit vertex colours. */
-function makeShellHalfGeometry() {
-  const g = new THREE.SphereGeometry(1, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2);
-  g.scale(1, 0.42, 1);
-  const p = g.attributes.position;
-  const v = new THREE.Vector3();
-  for (let i = 0; i < p.count; i++) {
-    v.fromBufferAttribute(p, i);
-    const ang = Math.atan2(v.z, v.x);
-    const rim = 1 + Math.sin(ang * 9.0) * 0.035 * (0.4 + v.y); // scalloped ridges near rim
-    v.x *= rim;
-    v.z *= rim;
-    p.setXYZ(i, v.x, v.y, v.z);
-  }
-  g.computeVertexNormals();
-  const nn = g.attributes.normal;
-  const col = new Float32Array(p.count * 3);
-  const shell = new THREE.Color("#ebdfc7");
-  const groove = new THREE.Color("#b7a17f");
-  const c = new THREE.Color();
-  for (let i = 0; i < p.count; i++) {
-    v.fromBufferAttribute(p, i);
-    const g2 = 0.5 + 0.5 * Math.sin(Math.atan2(v.z, v.x) * 9.0);
-    const top = 0.55 + 0.45 * Math.max(0, nn.getY(i));
-    c.copy(groove).lerp(shell, g2).multiplyScalar(top);
-    col[i * 3] = c.r;
-    col[i * 3 + 1] = c.g;
-    col[i * 3 + 2] = c.b;
-  }
-  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
   return g;
 }
 
@@ -566,10 +542,7 @@ function Seagrass() {
 
 /* ------------------------------ Rocks ------------------------------- */
 function Rocks() {
-  const material = useMemo(
-    () => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, fog: true }),
-    [],
-  );
+  const material = useMemo(() => makeReefMaterial({ caustic: 0.6 }), []);
   const geometry = useMemo(() => makeRockGeometry(), []);
   const matrices = useMemo(() => {
     const dummy = new THREE.Object3D();
@@ -606,84 +579,15 @@ function Rocks() {
   );
 }
 
-/* ------------------------------ Diver ------------------------------- */
-const diverFrag = /* glsl */ `
-  precision mediump float;
-  uniform float uFade;
-  uniform float uTime;
-  varying vec2 vUv;
-  float sdCircle(vec2 p, vec2 c, float r){ return length(p - c) - r; }
-  float sdSeg(vec2 p, vec2 a, vec2 b, float r){
-    vec2 pa = p - a, ba = b - a;
-    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(pa - ba * h) - r;
-  }
-  float sdBox(vec2 p, vec2 c, vec2 b, float r){
-    vec2 d = abs(p - c) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
-  }
-  void main(){
-    vec2 q = vUv - 0.5;
-    float k = sin(uTime * 2.0) * 0.06;        // leg kick
-    float ka = sin(uTime * 2.0 + 1.5) * 0.05; // arm sway
-    float d = 1e9;
-    d = min(d, sdCircle(q, vec2(0.0, 0.34), 0.062));                 // head
-    d = min(d, sdSeg(q, vec2(0.0, 0.29), vec2(0.0, -0.02), 0.062));  // torso
-    d = min(d, sdBox(q, vec2(-0.02, 0.13), vec2(0.028, 0.10), 0.02));// scuba tank
-    d = min(d, sdSeg(q, vec2(0.0, 0.24), vec2(0.22, 0.14 + ka), 0.032));  // right arm
-    d = min(d, sdSeg(q, vec2(0.0, 0.24), vec2(-0.16, 0.10 - ka), 0.030)); // left arm
-    d = min(d, sdSeg(q, vec2(-0.02, -0.02), vec2(-0.05, -0.34 + k), 0.042)); // left leg
-    d = min(d, sdSeg(q, vec2(0.02, -0.02), vec2(0.06, -0.34 - k), 0.042));   // right leg
-    d = min(d, sdSeg(q, vec2(-0.05, -0.34 + k), vec2(-0.11, -0.45 + k), 0.06)); // left fin
-    d = min(d, sdSeg(q, vec2(0.06, -0.34 - k), vec2(0.12, -0.45 - k), 0.06));   // right fin
-    float a = smoothstep(0.012, -0.012, d) * uFade * 0.78;
-    gl_FragColor = vec4(vec3(0.02, 0.06, 0.10), a);
-  }
-`;
+/* Shared billboard vertex shader for all the SDF creature planes below. */
 const diverVert = /* glsl */ `
   varying vec2 vUv;
   void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
 `;
 
-function Diver() {
-  const mesh = useRef<THREE.Mesh>(null);
-  const { camera } = useThree();
-  const uniforms = useMemo(() => ({ uFade: { value: 0 }, uTime: { value: 0 } }), []);
-
-  useFrame((state) => {
-    const m = mesh.current;
-    if (!m) return;
-    const t = state.clock.elapsedTime;
-    const u = winU(dayScroll.progress, 0.82, 0.92); // the diver drifts past
-    uniforms.uFade.value = bell(u);
-    uniforms.uTime.value = t;
-    m.position.set(
-      THREE.MathUtils.lerp(16, -16, u),
-      -11 + Math.sin(t * 0.4) * 0.6,
-      THREE.MathUtils.lerp(-24, -16, Math.sin(u * Math.PI)),
-    );
-    m.lookAt(camera.position);
-  });
-
-  return (
-    <mesh ref={mesh}>
-      <planeGeometry args={[9, 9]} />
-      <shaderMaterial
-        uniforms={uniforms}
-        vertexShader={diverVert}
-        fragmentShader={diverFrag}
-        transparent
-        depthWrite={false}
-      />
-    </mesh>
-  );
-}
-
 /* ------------------------------ Coral ------------------------------- */
 function Coral() {
-  const material = useMemo(
-    () => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0, fog: true }),
-    [],
-  );
+  const material = useMemo(() => makeReefMaterial({ vertexColors: false, caustic: 0.4 }), []);
   const geometry = useMemo(() => {
     const g = new THREE.ConeGeometry(0.16, 1.0, 5);
     g.translate(0, 0.5, 0);
@@ -973,12 +877,22 @@ function School() {
       })),
     [],
   );
-  // real (small) fish — bright silvery so the school reads clearly
-  const geometry = useMemo(() => makeFishGeometry("#e6f0f5", "#93aebb"), []);
+  // real (small) fish — pale base so per-instance hues read as reef species
+  // (clownfish orange, blue tang, yellow damsel, wrasse…) tinting one draw call.
+  const geometry = useMemo(() => makeFishGeometry("#eef4f7", "#b6c7d0"), []);
   const material = useMemo(() => makeSwimMaterial(uTime, 0.32), [uTime]);
+  const hues = useMemo(() => {
+    const pool = ["#ff8a4c", "#ffd15a", "#4aa3e6", "#5fd0c0", "#ff6f91", "#f2f6f8", "#8f7fe0"];
+    return Array.from({ length: COUNT }, () => new THREE.Color(pool[Math.floor(Math.random() * pool.length)]));
+  }, []);
   useFrame((state) => {
     const mesh = ref.current;
     if (!mesh) return;
+    if (!mesh.userData.colored) {
+      hues.forEach((c, i) => mesh.setColorAt(i, c));
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      mesh.userData.colored = true;
+    }
     const t = state.clock.elapsedTime;
     uTime.value = t;
     material.opacity = zoneFade(dayScroll.progress, 0.16, 0.26, 0.42, 0.52);
@@ -1172,10 +1086,7 @@ function Algae() {
 
 /* ------------------------------ Snails ------------------------------ */
 function Snails() {
-  const material = useMemo(
-    () => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, fog: true }),
-    [],
-  );
+  const material = useMemo(() => makeReefMaterial({ caustic: 0.4 }), []);
   const geometry = useMemo(() => makeSnailGeometry(), []);
   const matrices = useMemo(() => {
     const dummy = new THREE.Object3D();
@@ -1207,55 +1118,9 @@ function Snails() {
   );
 }
 
-/* ---------------------- Oyster with a pearl ------------------------- */
-function Oyster() {
-  const group = useRef<THREE.Group>(null);
-  const shellMat = useMemo(
-    () => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, side: THREE.DoubleSide, fog: true }),
-    [],
-  );
-  const pearlMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#f6fbff", transparent: true, opacity: 0 }), []);
-  const glowMat = useMemo(
-    () => new THREE.MeshBasicMaterial({ color: "#dff4ff", transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
-    [],
-  );
-  const shellGeo = useMemo(() => makeShellHalfGeometry(), []);
-  useFrame((state) => {
-    const g = group.current;
-    if (!g) return;
-    const t = state.clock.elapsedTime;
-    const u = winU(dayScroll.progress, 0.5, 0.64); // the oyster drifts past
-    const f = bell(u);
-    shellMat.opacity = f;
-    pearlMat.opacity = f;
-    glowMat.opacity = f * (0.28 + 0.16 * Math.sin(t * 1.6));
-    g.position.set(
-      THREE.MathUtils.lerp(-18, 18, u),
-      -12 + Math.sin(t * 0.5) * 0.4,
-      THREE.MathUtils.lerp(-24, -14, Math.sin(u * Math.PI)),
-    );
-    g.rotation.y = t * 0.12;
-  });
-  return (
-    <group ref={group} scale={1.7}>
-      <mesh geometry={shellGeo} material={shellMat} rotation={[Math.PI, 0, 0]} />
-      <mesh geometry={shellGeo} material={shellMat} position={[0, 0.06, -0.2]} rotation={[-0.95, 0, 0]} />
-      <mesh material={pearlMat} position={[0, 0.17, 0]}>
-        <sphereGeometry args={[0.15, 16, 12]} />
-      </mesh>
-      <mesh material={glowMat} position={[0, 0.17, 0]}>
-        <sphereGeometry args={[0.32, 16, 12]} />
-      </mesh>
-    </group>
-  );
-}
-
 /* ----------------------------- Starfish ----------------------------- */
 function Starfish() {
-  const material = useMemo(
-    () => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, side: THREE.DoubleSide, fog: true }),
-    [],
-  );
+  const material = useMemo(() => makeReefMaterial({ side: THREE.DoubleSide, caustic: 0.4 }), []);
   const geometry = useMemo(() => makeStarfishGeometry(), []);
   const matrices = useMemo(() => {
     const dummy = new THREE.Object3D();
@@ -1394,50 +1259,9 @@ function Anemones() {
   );
 }
 
-/* ------------------------- Ancient ruins --------------------------- */
-function Ruins() {
-  const material = useMemo(
-    () => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, fog: true }),
-    [],
-  );
-  const geometry = useMemo(() => makeRuinGeometry(), []);
-  const matrices = useMemo(() => {
-    const dummy = new THREE.Object3D();
-    const arr: THREE.Matrix4[] = [];
-    for (let i = 0; i < 6; i++) {
-      dummy.position.set((Math.random() - 0.5) * 16, -11, -12 - i * 5 - Math.random() * 3);
-      dummy.rotation.y = (Math.random() - 0.5) * 0.6;
-      const s = 0.9 + Math.random() * 0.7;
-      dummy.scale.set(s, s * (0.9 + Math.random() * 0.3), s);
-      dummy.updateMatrix();
-      arr.push(dummy.matrix.clone());
-    }
-    return arr;
-  }, []);
-  useFrame(() => {
-    material.opacity = zoneFade(dayScroll.progress, 0.44, 0.52, 0.6, 0.68) * 0.95;
-  });
-  return (
-    <instancedMesh
-      ref={(m) => {
-        if (m && !m.userData.set) {
-          matrices.forEach((mat, i) => m.setMatrixAt(i, mat));
-          m.instanceMatrix.needsUpdate = true;
-          m.userData.set = true;
-        }
-      }}
-      args={[geometry, material, 6]}
-      frustumCulled={false}
-    />
-  );
-}
-
 /* --------------------- Canyon walls (giant rocks) ------------------- */
 function CanyonWalls() {
-  const material = useMemo(
-    () => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, fog: true }),
-    [],
-  );
+  const material = useMemo(() => makeReefMaterial({ caustic: 0.55 }), []);
   const geometry = useMemo(() => makeRockGeometry(), []);
   const matrices = useMemo(() => {
     const dummy = new THREE.Object3D();
@@ -1470,19 +1294,599 @@ function CanyonWalls() {
   );
 }
 
+/* ============================================================= *
+ *  NEW: coral-species variety + reef life for the 8 ecosystems  *
+ * ============================================================= */
+
+/* Bake a grayscale, top-lit shade into a mesh's vertex colours so ONE instanced
+   mesh can be tinted per-instance (via instanceColor) into many hues — a whole
+   coral species in a single draw call. `tipBoost` brightens the upper tips. */
+function bakeGray(geo: THREE.BufferGeometry, base = 0.42, lit = 0.55, tipBoost = 0) {
+  geo.computeVertexNormals();
+  const p = geo.attributes.position;
+  const nn = geo.attributes.normal;
+  geo.computeBoundingBox();
+  const bb = geo.boundingBox!;
+  const yr = Math.max(1e-3, bb.max.y - bb.min.y);
+  const col = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    const up = 0.5 + 0.5 * Math.max(0, nn.getY(i));
+    const tip = (tipBoost * (p.getY(i) - bb.min.y)) / yr;
+    const s = Math.min(1, base + lit * up + tip);
+    col[i * 3] = s;
+    col[i * 3 + 1] = s;
+    col[i * 3 + 2] = s;
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  return geo;
+}
+
+/* Brain coral — a squashed, grooved dome (Diploria). */
+function makeBrainCoralGeometry() {
+  const g = new THREE.SphereGeometry(1, 28, 18, 0, Math.PI * 2, 0, Math.PI * 0.58).toNonIndexed();
+  g.scale(1, 0.6, 1);
+  const p = g.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const groove = Math.sin(v.x * 12.0 + v.z * 3.0) * Math.cos(v.z * 12.0) * 0.045;
+    v.x *= 1 + groove;
+    v.z *= 1 + groove;
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  return bakeGray(g, 0.4, 0.6);
+}
+
+/* Table coral — a short trunk carrying a wide, thin plate (Acropora). */
+function makeTableCoralGeometry() {
+  const stalk = new THREE.CylinderGeometry(0.12, 0.22, 0.5, 8).toNonIndexed();
+  stalk.translate(0, 0.25, 0);
+  const top = new THREE.CylinderGeometry(1.0, 0.88, 0.11, 22, 1).toNonIndexed();
+  top.translate(0, 0.56, 0);
+  return bakeGray(mergeGeometries([stalk, top])!, 0.42, 0.55, 0.1);
+}
+
+/* Staghorn coral — forking antler-like branches with bright tips (Acropora). */
+function makeStaghornGeometry() {
+  const parts: THREE.BufferGeometry[] = [];
+  const up = new THREE.Vector3(0, 1, 0);
+  const add = (base: THREE.Vector3, dir: THREE.Vector3, len: number, rad: number) => {
+    const c = new THREE.CylinderGeometry(rad * 0.5, rad, len, 6, 1).toNonIndexed();
+    c.translate(0, len / 2, 0);
+    c.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, dir.clone().normalize()));
+    c.translate(base.x, base.y, base.z);
+    parts.push(c);
+    return base.clone().addScaledVector(dir.clone().normalize(), len);
+  };
+  const stems = 5;
+  for (let i = 0; i < stems; i++) {
+    const a = (i / stems) * Math.PI * 2;
+    const base = new THREE.Vector3(Math.cos(a) * 0.12, 0, Math.sin(a) * 0.12);
+    const dir = new THREE.Vector3(Math.cos(a) * 0.5, 1.5, Math.sin(a) * 0.5);
+    const tip = add(base, dir, 0.55, 0.07);
+    add(tip, dir.clone().applyAxisAngle(up, 0.6).setY(1.2), 0.42, 0.05);
+    add(tip, dir.clone().applyAxisAngle(up, -0.7).setY(1.3), 0.4, 0.05);
+  }
+  return bakeGray(mergeGeometries(parts)!, 0.4, 0.6, 0.28);
+}
+
+/* Tube coral — a clustered stand of open vertical tubes (Tubastraea). */
+function makeTubeCoralGeometry() {
+  const spots: [number, number][] = [
+    [0, 0.4], [0.28, 0.1], [-0.24, 0.12], [0.1, -0.26], [-0.16, -0.22], [0.34, -0.05], [-0.02, 0.02],
+  ];
+  const parts = spots.map(([x, z], i) => {
+    const h = 0.5 + (i % 3) * 0.28;
+    const t = new THREE.CylinderGeometry(0.1, 0.13, h, 9, 1, true).toNonIndexed();
+    t.translate(x, h / 2, z);
+    return t;
+  });
+  return bakeGray(mergeGeometries(parts)!, 0.42, 0.55, 0.3);
+}
+
+/* Sea fan — a flat, branching gorgonian standing edge-on to the current. */
+function makeSeaFanGeometry() {
+  const ribs = 9;
+  const parts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < ribs; i++) {
+    const t = i / (ribs - 1);
+    const len = 1.0 - Math.abs(t - 0.5) * 0.7;
+    const b = makeBladeGeometry(len * 1.7, 0.05, 0.12);
+    b.rotateZ((t - 0.5) * 1.6);
+    parts.push(b);
+  }
+  const g = mergeGeometries(parts)!;
+  g.scale(1, 1, 0.14); // flatten into a fan plane
+  return bakeGray(g, 0.42, 0.55, 0.22);
+}
+
+/* Barrel sponge — a bumpy open-mouthed tube growing off the reef. */
+function makeSpongeGeometry() {
+  const g = new THREE.CylinderGeometry(0.5, 0.36, 1.0, 16, 3, true).toNonIndexed();
+  g.translate(0, 0.5, 0);
+  const p = g.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const r = Math.hypot(v.x, v.z);
+    if (r > 1e-3) {
+      const bump = Math.sin(Math.atan2(v.z, v.x) * 7.0 + v.y * 4.0) * 0.035;
+      const s = (r + bump) / r;
+      v.x *= s;
+      v.z *= s;
+    }
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  return bakeGray(g, 0.4, 0.6, 0.16);
+}
+
+/* Sea cucumber — a knobbly capsule resting along the seabed (Holothuria). */
+function makeSeaCucumberGeometry() {
+  const g = new THREE.CapsuleGeometry(0.22, 0.9, 6, 12).toNonIndexed();
+  g.rotateZ(Math.PI / 2); // lie horizontal on the bed
+  const p = g.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    v.y += Math.sin(v.x * 10.0) * 0.02;
+    v.z *= 1 + Math.sin(v.x * 8.0) * 0.05;
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  return bakeGray(g, 0.44, 0.5);
+}
+
+/* Crab — a flat carapace on eight jointed legs (grayscale; tinted per-instance). */
+function makeCrabGeometry() {
+  const parts: THREE.BufferGeometry[] = [];
+  const body = new THREE.SphereGeometry(0.3, 12, 8).toNonIndexed();
+  body.scale(1, 0.5, 0.8);
+  body.translate(0, 0.18, 0);
+  parts.push(body);
+  for (let side = -1; side <= 1; side += 2) {
+    for (let i = 0; i < 4; i++) {
+      const leg = new THREE.CylinderGeometry(0.02, 0.032, 0.42, 4).toNonIndexed();
+      leg.rotateZ(side * 1.15);
+      leg.translate(side * 0.34, 0.05, -0.2 + i * 0.13);
+      parts.push(leg);
+    }
+  }
+  return bakeGray(mergeGeometries(parts)!, 0.4, 0.5);
+}
+
+/* A natural stone archway, encrusted with coral — the camera swims through it.
+   A rough half-torus span on two stubby feet; stone with coral speckle, top-lit. */
+function makeArchGeometry() {
+  const hsh = (x: number, y: number, z: number) => {
+    const s = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453;
+    return s - Math.floor(s);
+  };
+  const parts: THREE.BufferGeometry[] = [new THREE.TorusGeometry(3.4, 0.85, 12, 40, Math.PI).toNonIndexed()];
+  [-3.4, 3.4].forEach((x) => {
+    const f = new THREE.CylinderGeometry(1.0, 1.25, 1.6, 10).toNonIndexed();
+    f.translate(x, -0.7, 0);
+    parts.push(f);
+  });
+  const g = mergeGeometries(parts)!;
+  const p = g.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    p.setXYZ(
+      i,
+      v.x + (hsh(v.x, v.y, v.z) - 0.5) * 0.4,
+      v.y + (hsh(v.y, v.z, v.x) - 0.5) * 0.4,
+      v.z + (hsh(v.z, v.x, v.y) - 0.5) * 0.4,
+    );
+  }
+  g.computeVertexNormals();
+  const np = g.attributes.position;
+  const nn = g.attributes.normal;
+  const stone = new THREE.Color("#5c6266");
+  const stone2 = new THREE.Color("#6e6657");
+  const coralA = new THREE.Color("#d17a52");
+  const coralB = new THREE.Color("#5fae7d");
+  const coralC = new THREE.Color("#c56fa0");
+  const c = new THREE.Color();
+  const col = new Float32Array(np.count * 3);
+  for (let i = 0; i < np.count; i++) {
+    const x = np.getX(i), y = np.getY(i), z = np.getZ(i);
+    const top = 0.5 + 0.5 * Math.max(0, nn.getY(i));
+    const n = hsh(x * 2.1, y * 2.1, z * 2.1);
+    c.copy(stone).lerp(stone2, hsh(x, y, z));
+    if (n > 0.82) c.lerp(coralA, 0.75);
+    else if (n > 0.7) c.lerp(coralB, 0.65);
+    else if (n > 0.6) c.lerp(coralC, 0.6);
+    c.multiplyScalar(top * (0.85 + n * 0.2));
+    col[i * 3] = c.r;
+    col[i * 3 + 1] = c.g;
+    col[i * 3 + 2] = c.b;
+  }
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  return g;
+}
+
+/* One reusable "scatter across the seabed" instanced layer — a builder makes the
+   geometry, per-instance colour tints it, and a dive-zone fade windows it in/out.
+   `sway` routes it through the kelp/current vertex-shader so soft life waves. */
+function ScatterBed({
+  build,
+  count,
+  palette,
+  fade,
+  area = 42,
+  zBack = 32,
+  zFront = 5,
+  y = -20,
+  sMin = 0.6,
+  sMax = 1.4,
+  tilt = 0.3,
+  sway,
+  caustic = 0.5,
+}: {
+  build: () => THREE.BufferGeometry;
+  count: number;
+  palette?: string[];
+  fade: [number, number, number, number];
+  area?: number;
+  zBack?: number;
+  zFront?: number;
+  y?: number;
+  sMin?: number;
+  sMax?: number;
+  tilt?: number;
+  sway?: { h: number; amp: number };
+  caustic?: number;
+}) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const uTime = useMemo(() => ({ value: 0 }), []);
+  const geometry = useMemo(build, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const material = useMemo(
+    () => (sway ? makeGrassMaterial(uTime, sway.h, sway.amp) : makeReefMaterial({ side: THREE.DoubleSide, caustic })),
+    [uTime, sway, caustic],
+  );
+  const data = useMemo(() => {
+    const dummy = new THREE.Object3D();
+    const mats: THREE.Matrix4[] = [];
+    const cols: THREE.Color[] = [];
+    for (let i = 0; i < count; i++) {
+      dummy.position.set((Math.random() - 0.5) * area, y, -Math.random() * zBack + zFront);
+      dummy.rotation.set((Math.random() - 0.5) * tilt, Math.random() * Math.PI * 2, (Math.random() - 0.5) * tilt);
+      const s = sMin + Math.random() * (sMax - sMin);
+      dummy.scale.set(s, s * (0.82 + Math.random() * 0.45), s);
+      dummy.updateMatrix();
+      mats.push(dummy.matrix.clone());
+      if (palette) cols.push(new THREE.Color(palette[Math.floor(Math.random() * palette.length)]));
+    }
+    return { mats, cols };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useFrame((state) => {
+    if (sway) uTime.value = state.clock.elapsedTime;
+    if (ref.current) material.opacity = zoneFade(dayScroll.progress, fade[0], fade[1], fade[2], fade[3]) * 0.95;
+  });
+  return (
+    <instancedMesh
+      ref={(m) => {
+        ref.current = m;
+        if (m && !m.userData.set) {
+          data.mats.forEach((mat, i) => m.setMatrixAt(i, mat));
+          if (palette) data.cols.forEach((c, i) => m.setColorAt(i, c));
+          m.instanceMatrix.needsUpdate = true;
+          if (m.instanceColor) m.instanceColor.needsUpdate = true;
+          m.userData.set = true;
+        }
+      }}
+      args={[geometry, material, count]}
+      frustumCulled={false}
+    />
+  );
+}
+
+/* Palettes — vivid reef coral hues (no two neighbours identical). */
+// softened toward real reef tones — vivid but not neon; light + caustics lift them
+const CORAL_HUES = ["#e07a56", "#d76a7e", "#e0a24f", "#e6cf76", "#8f6fb0", "#cf6a93", "#5fb3a0", "#6699cc"];
+const SPONGE_HUES = ["#c96b46", "#b85a78", "#cf9a4a", "#6f8f57"];
+const KELP_HUES = ["#4f8f52", "#3f7f46", "#5a9e5c", "#6b8f3f", "#3f8560", "#77a04d"];
+const CRAB_HUES = ["#b25640", "#c06a48", "#a85a4a", "#9a4a52"];
+
+/* Coral-crusted natural archways — the swim-through structures of Section 6. */
+function Archways() {
+  const material = useMemo(() => makeReefMaterial({ side: THREE.DoubleSide, caustic: 0.5 }), []);
+  const geometry = useMemo(makeArchGeometry, []);
+  const matrices = useMemo(() => {
+    const dummy = new THREE.Object3D();
+    const arr: THREE.Matrix4[] = [];
+    for (let i = 0; i < 4; i++) {
+      dummy.position.set((Math.random() - 0.5) * 10, -16.6, -8 - i * 7 - Math.random() * 3);
+      dummy.rotation.y = (Math.random() - 0.5) * 0.5;
+      const s = 2.2 + Math.random() * 1.0;
+      dummy.scale.set(s, s * (0.9 + Math.random() * 0.3), s);
+      dummy.updateMatrix();
+      arr.push(dummy.matrix.clone());
+    }
+    return arr;
+  }, []);
+  useFrame(() => {
+    material.opacity = zoneFade(dayScroll.progress, 0.5, 0.58, 0.72, 0.8) * 0.95;
+  });
+  return (
+    <instancedMesh
+      ref={(m) => {
+        if (m && !m.userData.set) {
+          matrices.forEach((mat, i) => m.setMatrixAt(i, mat));
+          m.instanceMatrix.needsUpdate = true;
+          m.userData.set = true;
+        }
+      }}
+      args={[geometry, material, 4]}
+      frustumCulled={false}
+    />
+  );
+}
+
+/* A big travelling school — hundreds of small fish orbiting a moving centre, for
+   the coral canyon and the coral metropolis ("schools of hundreds of fish"). */
+function BigSchool({
+  count = 220,
+  fade,
+  center,
+  radius,
+  tint,
+}: {
+  count?: number;
+  fade: [number, number, number, number];
+  center: [number, number, number];
+  radius: number;
+  tint: string;
+}) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const q = useMemo(() => new THREE.Quaternion(), []);
+  const xAxis = useMemo(() => new THREE.Vector3(1, 0, 0), []);
+  const vel = useMemo(() => new THREE.Vector3(), []);
+  const uTime = useMemo(() => ({ value: 0 }), []);
+  const fishlets = useMemo(
+    () =>
+      Array.from({ length: count }, () => ({
+        ox: (Math.random() - 0.5) * radius,
+        oy: (Math.random() - 0.5) * radius * 0.5,
+        oz: (Math.random() - 0.5) * radius,
+        ph: Math.random() * 6.28,
+        sc: 0.18 + Math.random() * 0.14,
+      })),
+    [count, radius],
+  );
+  const geometry = useMemo(() => makeFishGeometry("#eef4f7", "#9fb8c4"), []);
+  const material = useMemo(() => {
+    const m = makeSwimMaterial(uTime, 0.3);
+    m.color = new THREE.Color(tint);
+    return m;
+  }, [uTime, tint]);
+  useFrame((state) => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const t = state.clock.elapsedTime;
+    uTime.value = t;
+    material.opacity = zoneFade(dayScroll.progress, fade[0], fade[1], fade[2], fade[3]);
+    const cx = center[0] + Math.cos(t * 0.12) * 8;
+    const cy = center[1] + Math.sin(t * 0.25) * 1.6;
+    const cz = center[2] + Math.sin(t * 0.12) * 8;
+    vel.set(-Math.sin(t * 0.12), 0, Math.cos(t * 0.12)).normalize();
+    q.setFromUnitVectors(xAxis, vel);
+    for (let i = 0; i < count; i++) {
+      const f = fishlets[i];
+      const wob = Math.sin(t * 3 + f.ph) * 0.3;
+      dummy.position.set(cx + f.ox + wob, cy + f.oy + Math.sin(t * 2 + f.ph) * 0.2, cz + f.oz);
+      dummy.quaternion.copy(q);
+      dummy.scale.setScalar(f.sc);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+  return <instancedMesh ref={ref} args={[geometry, material, count]} frustumCulled={false} />;
+}
+
+/* Seahorse — a lumpy S-curved body of stacked segments with a snout and curled
+   tail; upright, tinted warm, swaying gently on the current (kelp forest life). */
+function makeSeahorseGeometry() {
+  const parts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 7; i++) {
+    const t = i / 6;
+    const seg = new THREE.SphereGeometry(0.12 * (1 - t * 0.45), 8, 6).toNonIndexed();
+    seg.translate(Math.sin(t * 3.1) * 0.1, 0.18 + t * 0.82, 0);
+    parts.push(seg);
+  }
+  const head = new THREE.SphereGeometry(0.12, 8, 6).toNonIndexed();
+  head.scale(1, 0.85, 1);
+  head.translate(0.12, 1.02, 0);
+  parts.push(head);
+  const snout = new THREE.CylinderGeometry(0.02, 0.045, 0.18, 6).toNonIndexed();
+  snout.rotateZ(-1.05);
+  snout.translate(0.26, 1.02, 0);
+  parts.push(snout);
+  // curled prehensile tail
+  for (let i = 0; i < 5; i++) {
+    const a = i / 5;
+    const seg = new THREE.SphereGeometry(0.06 * (1 - a * 0.5), 6, 5).toNonIndexed();
+    seg.translate(Math.cos(a * 7.0) * 0.08 - 0.02, 0.12 - a * 0.05, 0);
+    parts.push(seg);
+  }
+  return bakeGray(mergeGeometries(parts)!, 0.42, 0.55, 0.12);
+}
+
+/* Marine snow — the slow drift of organic particles that hangs in every real
+   reef, thickening as the water deepens. Cheap additive points in the shader. */
+function MarineSnow() {
+  const uniforms = useMemo(() => ({ uTime: { value: 0 }, uFade: { value: 0 } }), []);
+  const geometry = useMemo(() => {
+    const N = 700;
+    const pos = new Float32Array(N * 3);
+    const seed = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 46;
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      pos[i * 3 + 2] = -Math.random() * 40 + 6;
+      seed[i] = Math.random();
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    g.setAttribute("aSeed", new THREE.BufferAttribute(seed, 1));
+    return g;
+  }, []);
+  useFrame((_, dt) => {
+    uniforms.uTime.value += Math.min(dt, 0.05);
+    uniforms.uFade.value = zoneFade(dayScroll.progress, 0.42, 0.56, 1.0, 1.06);
+  });
+  const vert = /* glsl */ `
+    uniform float uTime; uniform float uFade; attribute float aSeed; varying float vA;
+    void main(){
+      vec3 p = position;
+      // slow downward drift + lateral wander (marine snow sinks)
+      p.y = mod(position.y - uTime * (0.5 + aSeed * 0.6) + 20.0, 40.0) - 20.0;
+      p.x += sin(uTime * 0.3 + aSeed * 6.28) * 0.5;
+      vA = uFade * (0.35 + 0.65 * aSeed);
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_Position = projectionMatrix * mv;
+      gl_PointSize = (13.0 / -mv.z) * (0.4 + aSeed * 0.7);
+    }
+  `;
+  const frag = /* glsl */ `
+    precision mediump float; varying float vA;
+    void main(){
+      float d = distance(gl_PointCoord, vec2(0.5));
+      if (d > 0.5) discard;
+      gl_FragColor = vec4(0.85, 0.93, 0.95, smoothstep(0.5, 0.0, d) * vA * 0.5);
+    }
+  `;
+  return (
+    <points geometry={geometry}>
+      <shaderMaterial uniforms={uniforms} vertexShader={vert} fragmentShader={frag} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
+    </points>
+  );
+}
+
+const SEAHORSE_HUES = ["#e0b24f", "#d98b46", "#cf7a52", "#c99a5f", "#b8703f"];
+const FEATHER_HUES = ["#c94f4a", "#e0a13a", "#7a3f6a", "#d96a54", "#e6d15a"];
+const SILHOUETTE_HUES = ["#0a2230", "#0c2a38", "#0b2632"]; // dark foreground framing
+
+/* All the new coral-species + reef-life layers, grouped by the ecosystem they
+   belong to and windowed so each dive zone is dense and never repeats. */
+function ReefLife() {
+  return (
+    <>
+      {/* Section 2 · Coral Garden — five distinct coral species, vivid hues */}
+      <ScatterBed build={makeBrainCoralGeometry} count={34} palette={CORAL_HUES} fade={[0.14, 0.24, 0.5, 0.62]} sMin={0.7} sMax={1.5} tilt={0.15} />
+      <ScatterBed build={makeTableCoralGeometry} count={30} palette={CORAL_HUES} fade={[0.15, 0.25, 0.5, 0.62]} sMin={0.8} sMax={1.7} tilt={0.12} />
+      <ScatterBed build={makeStaghornGeometry} count={40} palette={CORAL_HUES} fade={[0.15, 0.25, 0.52, 0.64]} sMin={0.7} sMax={1.4} tilt={0.18} />
+      <ScatterBed build={makeTubeCoralGeometry} count={34} palette={CORAL_HUES} fade={[0.16, 0.26, 0.5, 0.62]} sMin={0.7} sMax={1.3} tilt={0.15} />
+      <ScatterBed build={makeSeaFanGeometry} count={30} palette={CORAL_HUES} fade={[0.16, 0.26, 0.54, 0.66]} sMin={0.9} sMax={1.9} tilt={0.1} />
+
+      {/* Sections 3–6 · reef bed life spread across the canyon, kelp & valley */}
+      <ScatterBed build={makeSpongeGeometry} count={40} palette={SPONGE_HUES} fade={[0.3, 0.4, 0.74, 0.84]} sMin={0.7} sMax={1.6} tilt={0.12} />
+      <ScatterBed build={makeSeaCucumberGeometry} count={26} palette={SPONGE_HUES} fade={[0.32, 0.42, 0.72, 0.82]} y={-19.85} sMin={0.7} sMax={1.3} tilt={0.05} />
+      <ScatterBed build={makeCrabGeometry} count={22} palette={CRAB_HUES} fade={[0.3, 0.4, 0.72, 0.82]} y={-19.8} sMin={0.6} sMax={1.1} tilt={0.05} />
+
+      {/* Section 4 · Dense Kelp Forest — tall blades bending in the current */}
+      <ScatterBed
+        build={() => makeBladeGeometry(5.2, 0.17, 0.5)}
+        count={200}
+        palette={KELP_HUES}
+        fade={[0.36, 0.46, 0.62, 0.72]}
+        area={40}
+        zBack={30}
+        sMin={0.8}
+        sMax={1.6}
+        tilt={0.1}
+        sway={{ h: 5.2, amp: 1.0 }}
+      />
+      {/* Section 4 · seahorses clinging in the kelp, gently swaying */}
+      <ScatterBed
+        build={makeSeahorseGeometry}
+        count={16}
+        palette={SEAHORSE_HUES}
+        fade={[0.37, 0.47, 0.66, 0.76]}
+        area={38}
+        y={-19.4}
+        sMin={0.7}
+        sMax={1.15}
+        tilt={0.08}
+        sway={{ h: 1.0, amp: 0.28 }}
+      />
+      {/* Section 3–5 · feather stars (crinoids) perched on the reef */}
+      <ScatterBed
+        build={makeAnemoneGeometry}
+        count={30}
+        palette={FEATHER_HUES}
+        fade={[0.28, 0.38, 0.7, 0.8]}
+        y={-19.6}
+        sMin={0.6}
+        sMax={1.1}
+        tilt={0.25}
+        sway={{ h: 0.42, amp: 0.1 }}
+      />
+
+      {/* Section 8 · Coral Metropolis — the richest bed, coral everywhere */}
+      <ScatterBed build={makeStaghornGeometry} count={72} palette={CORAL_HUES} fade={[0.82, 0.9, 1.0, 1.06]} sMin={0.7} sMax={1.6} tilt={0.2} />
+      <ScatterBed build={makeBrainCoralGeometry} count={54} palette={CORAL_HUES} fade={[0.82, 0.9, 1.0, 1.06]} sMin={0.7} sMax={1.6} tilt={0.15} />
+      <ScatterBed build={makeTableCoralGeometry} count={44} palette={CORAL_HUES} fade={[0.82, 0.9, 1.0, 1.06]} sMin={0.8} sMax={1.8} tilt={0.12} />
+      <ScatterBed build={makeSeaFanGeometry} count={48} palette={CORAL_HUES} fade={[0.83, 0.91, 1.0, 1.06]} sMin={1.0} sMax={2.0} tilt={0.1} />
+
+      {/* Foreground silhouettes — big dark coral fans near the camera path that
+          sweep past for real depth/parallax (dim caustic so they read as shapes) */}
+      <ScatterBed
+        build={makeSeaFanGeometry}
+        count={16}
+        palette={SILHOUETTE_HUES}
+        fade={[0.16, 0.26, 1.0, 1.06]}
+        area={48}
+        zBack={34}
+        zFront={7}
+        y={-18}
+        sMin={2.4}
+        sMax={4.4}
+        tilt={0.14}
+        caustic={0.12}
+      />
+      <ScatterBed
+        build={makeStaghornGeometry}
+        count={12}
+        palette={SILHOUETTE_HUES}
+        fade={[0.18, 0.28, 1.0, 1.06]}
+        area={46}
+        zBack={32}
+        zFront={6}
+        y={-18.5}
+        sMin={2.2}
+        sMax={3.8}
+        tilt={0.12}
+        caustic={0.12}
+      />
+    </>
+  );
+}
+
 export default function SeaLife() {
   return (
     <>
+      <ReefClock />
       <Fish />
       <School />
+      <ReefLife />
       <Seagrass />
       <Algae />
       <Rocks />
       <CanyonWalls />
       <Starfish />
+      <Snails />
       <Coral />
       <Anemones />
-      <Ruins />
+      <Archways />
+      {/* schools of hundreds — a tight sardine bait-ball in the sunlit shallows
+          (Section 1), the coral canyon (Section 3) and the metropolis (Section 8) */}
+      <BigSchool count={240} fade={[0.08, 0.15, 0.24, 0.34]} center={[3, -6, -15]} radius={4.5} tint="#cfe0e6" />
+      <BigSchool count={170} fade={[0.3, 0.4, 0.6, 0.7]} center={[-4, -9, -16]} radius={6} tint="#ffce7a" />
+      <BigSchool count={230} fade={[0.68, 0.78, 0.94, 1.02]} center={[0, -11, -18]} radius={7.5} tint="#bcd3dd" />
+      <MarineSnow />
       <Jellyfish />
       <GlowDomes />
       <BubbleColumns />
@@ -1516,7 +1920,6 @@ export default function SeaLife() {
         }}
       />
       <Manta />
-      <Diver />
       <GLTFCreature
         url="/models/whale.glb"
         enabled={HAS_MODELS}
