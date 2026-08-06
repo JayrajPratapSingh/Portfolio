@@ -62,20 +62,17 @@ export default function Footer() {
 
   return (
     <footer className="relative z-30 overflow-hidden border-t border-[var(--border)] bg-[var(--surface)] px-6 pb-10 pt-20 text-foreground md:px-16 dark:bg-[#04010f]">
-      {/* animated gradient top-line — both themes */}
+      {/* static gradient top-line accent — both themes */}
       <div
         aria-hidden
-        className="gradient-pan pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-[linear-gradient(90deg,#6366f1,#38bdf8,#a855f7,#6366f1)] dark:bg-[linear-gradient(90deg,#22d3ee,#3b82f6,#a855f7,#22d3ee)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,#6366f1,#38bdf8,#a855f7,transparent)] opacity-70 dark:bg-[linear-gradient(90deg,transparent,#22d3ee,#3b82f6,#a855f7,transparent)]"
       />
 
-      {/* animated 3D backdrop */}
+      {/* professional 3D mesh-gradient backdrop */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         {mounted && <FooterBackground isLight={isLight} />}
-        {/* colour glows over the wave */}
-        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-indigo-400/20 blur-[120px] dark:bg-cyan-500/10" />
-        <div className="absolute -right-24 top-10 h-96 w-96 rounded-full bg-sky-300/20 blur-[120px] dark:bg-purple-500/10" />
         {/* readability veil so content stays crisp over the 3D */}
-        <div className="absolute inset-0 bg-white/25 dark:bg-[#04010f]/45" />
+        <div className="absolute inset-0 bg-white/30 dark:bg-[#04010f]/40" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl">

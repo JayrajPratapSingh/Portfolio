@@ -238,7 +238,7 @@ function CameraRig() {
     const yAbove = 2.1 + dayMouse.ny * 0.22 + Math.sin(t * 0.2) * 0.06;
     const yUnder = -13.0 - s * 2.0 - canyon * 7.0; // cruise near the bed, then drop
     const targetY = THREE.MathUtils.lerp(yAbove, yUnder, dive);
-    const targetZ = 7.0 - s * 30.0; // long, continuous forward travel through the world
+    const targetZ = 12.0 - s * 30.0; // long, continuous forward travel (pulled back for a wide, roomier framing)
 
     camera.position.x += (tx - camera.position.x) * 0.03;
     camera.position.y += (targetY - camera.position.y) * 0.04;
@@ -269,7 +269,7 @@ export default function WaterWorld() {
     <Canvas
       dpr={[1, 1.6]}
       gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
-      camera={{ position: [0, 2.3, 7.5], fov: 46, near: 0.1, far: 200 }}
+      camera={{ position: [0, 2.3, 12], fov: 60, near: 0.1, far: 200 }}
     >
       <fog attach="fog" args={["#e9dccb", 22, 70]} />
       {/* underwater lighting: bright blue-green surface glow from above, dark

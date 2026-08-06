@@ -79,45 +79,66 @@ function makeTri3(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) {
    forked caudal fin and a dorsal fin, belly→back vertex-shaded. Shared by the
    big fish and the small-fish school so both look like real fish. */
 function makeFishGeometry(back: string, belly: string) {
+  // rounder, better-tapered body (nose +x, tail -x)
   const profile = [
     new THREE.Vector2(0.015, -1.0),
-    new THREE.Vector2(0.1, -0.72),
-    new THREE.Vector2(0.2, -0.35),
-    new THREE.Vector2(0.26, 0.0),
-    new THREE.Vector2(0.22, 0.35),
-    new THREE.Vector2(0.12, 0.72),
+    new THREE.Vector2(0.08, -0.78),
+    new THREE.Vector2(0.16, -0.5),
+    new THREE.Vector2(0.23, -0.15),
+    new THREE.Vector2(0.27, 0.16),
+    new THREE.Vector2(0.24, 0.46),
+    new THREE.Vector2(0.16, 0.72),
+    new THREE.Vector2(0.08, 0.9),
     new THREE.Vector2(0.02, 1.0),
   ];
-  let body: THREE.BufferGeometry = new THREE.LatheGeometry(profile, 18);
+  let body: THREE.BufferGeometry = new THREE.LatheGeometry(profile, 20);
   body.rotateZ(-Math.PI / 2);
   body = body.toNonIndexed();
   shadeByY(body, new THREE.Color(back), new THREE.Color(belly));
 
-  const finCol = new THREE.Color(belly).multiplyScalar(0.7);
+  const finCol = new THREE.Color(belly).multiplyScalar(0.72);
+  const finDk = new THREE.Color(back).multiplyScalar(0.78);
+
+  // forked caudal — lobes reach past the central notch
   const caudal = mergeGeometries([
-    makeTri(new THREE.Vector2(-0.9, 0), new THREE.Vector2(-1.5, 0.55), new THREE.Vector2(-1.12, 0)),
-    makeTri(new THREE.Vector2(-0.9, 0), new THREE.Vector2(-1.12, 0), new THREE.Vector2(-1.5, -0.55)),
+    makeTri(new THREE.Vector2(-0.88, 0), new THREE.Vector2(-1.58, 0.52), new THREE.Vector2(-1.24, 0.02)),
+    makeTri(new THREE.Vector2(-0.88, 0), new THREE.Vector2(-1.24, -0.02), new THREE.Vector2(-1.58, -0.52)),
   ])!;
-  flatColor(caudal, finCol);
-  const dorsal = makeTri(new THREE.Vector2(0.28, 0.24), new THREE.Vector2(-0.14, 0.24), new THREE.Vector2(0.05, 0.56));
-  flatColor(dorsal, finCol);
+  flatColor(caudal, finDk);
 
-  // pectoral fins on both sides
-  const pecR = makeTri3(new THREE.Vector3(0.3, -0.02, 0.1), new THREE.Vector3(0.0, -0.14, 0.26), new THREE.Vector3(0.06, 0.02, 0.12));
-  const pecL = makeTri3(new THREE.Vector3(0.3, -0.02, -0.1), new THREE.Vector3(0.0, -0.14, -0.26), new THREE.Vector3(0.06, 0.02, -0.12));
-  flatColor(pecR, finCol);
-  flatColor(pecL, finCol);
+  // two-segment dorsal ridge along the back
+  const dorsal = mergeGeometries([
+    makeTri(new THREE.Vector2(0.34, 0.22), new THREE.Vector2(-0.08, 0.22), new THREE.Vector2(0.16, 0.56)),
+    makeTri(new THREE.Vector2(-0.08, 0.22), new THREE.Vector2(-0.48, 0.2), new THREE.Vector2(-0.22, 0.46)),
+  ])!;
+  flatColor(dorsal, finDk);
 
-  // eyes (near-black spheres on the head) — the big "not-a-toy" detail
+  // anal fin on the belly toward the tail
+  const anal = makeTri(new THREE.Vector2(-0.2, -0.2), new THREE.Vector2(-0.58, -0.19), new THREE.Vector2(-0.36, -0.44));
+  flatColor(anal, finCol);
+
+  // pectoral fins (paired, mid-flank) + pelvic fins (paired, under the belly)
+  const pecR = makeTri3(new THREE.Vector3(0.34, -0.02, 0.12), new THREE.Vector3(0.0, -0.16, 0.32), new THREE.Vector3(0.08, 0.03, 0.14));
+  const pecL = makeTri3(new THREE.Vector3(0.34, -0.02, -0.12), new THREE.Vector3(0.0, -0.16, -0.32), new THREE.Vector3(0.08, 0.03, -0.14));
+  const pelR = makeTri3(new THREE.Vector3(0.12, -0.2, 0.08), new THREE.Vector3(-0.12, -0.22, 0.05), new THREE.Vector3(-0.02, -0.36, 0.03));
+  const pelL = makeTri3(new THREE.Vector3(0.12, -0.2, -0.08), new THREE.Vector3(-0.12, -0.22, -0.05), new THREE.Vector3(-0.02, -0.36, -0.03));
+  [pecR, pecL, pelR, pelL].forEach((f) => flatColor(f, finCol));
+
+  // eyes — dark spheres with a tiny bright glint so they read as real eyes
   const eyeCol = new THREE.Color("#0a0f14");
-  const eyeR = new THREE.SphereGeometry(0.05, 8, 6).toNonIndexed();
-  eyeR.translate(0.52, 0.07, 0.12);
-  flatColor(eyeR, eyeCol);
-  const eyeL = new THREE.SphereGeometry(0.05, 8, 6).toNonIndexed();
-  eyeL.translate(0.52, 0.07, -0.12);
-  flatColor(eyeL, eyeCol);
+  const eyeParts: THREE.BufferGeometry[] = [];
+  [1, -1].forEach((s) => {
+    const e = new THREE.SphereGeometry(0.055, 10, 8).toNonIndexed();
+    e.translate(0.6, 0.08, 0.13 * s);
+    flatColor(e, eyeCol);
+    eyeParts.push(e);
+    const glint = new THREE.SphereGeometry(0.02, 6, 5).toNonIndexed();
+    glint.translate(0.63, 0.11, 0.15 * s);
+    flatColor(glint, new THREE.Color("#eaf2f6"));
+    eyeParts.push(glint);
+  });
 
-  return mergeGeometries([body, caudal, dorsal, pecR, pecL, eyeR, eyeL])!;
+  return mergeGeometries([body, caudal, dorsal, anal, pecR, pecL, pelR, pelL, ...eyeParts])!;
 }
 
 /* ------------------------- underwater lighting -------------------------- *
@@ -134,10 +155,6 @@ function ReefClock() {
 }
 
 const CAUSTIC_VARY = "varying vec3 vCausW;\nvarying float vCausUp;\n";
-const CAUSTIC_VERT = /* glsl */ `
-  vCausW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
-  vCausUp = normal.y;
-`;
 const CAUSTIC_FRAG = /* glsl */ `
   vec2 cUv = vCausW.xz * 0.5;
   float cw = sin(cUv.x * 2.2 + uTime * 0.7) * sin(cUv.y * 2.2 - uTime * 0.55)
@@ -148,13 +165,23 @@ const CAUSTIC_FRAG = /* glsl */ `
 `;
 
 /* Inject the caustic world-position + fragment highlight into a material's
-   compiled shaders (chains after any vertex displacement already added). */
-function injectCaustic(sh: THREE.WebGLProgramParametersWithUniforms, time: { value: number }, strength: number) {
+   compiled shaders (chains after any vertex displacement already added). Pass
+   instanced=false for a plain Mesh (the big procedural creatures) — its shader
+   has no `instanceMatrix`, so we take world-space straight off the modelMatrix. */
+function injectCaustic(
+  sh: THREE.WebGLProgramParametersWithUniforms,
+  time: { value: number },
+  strength: number,
+  instanced = true,
+) {
   sh.uniforms.uTime = time;
   sh.uniforms.uCaustic = { value: strength };
+  const world = instanced
+    ? "(modelMatrix * instanceMatrix * vec4(transformed, 1.0))"
+    : "(modelMatrix * vec4(transformed, 1.0))";
   sh.vertexShader = CAUSTIC_VARY + "uniform float uTime;\n" + sh.vertexShader.replace(
     "#include <project_vertex>",
-    CAUSTIC_VERT + "\n#include <project_vertex>",
+    `  vCausW = ${world}.xyz;\n  vCausUp = normal.y;\n#include <project_vertex>`,
   );
   sh.fragmentShader =
     CAUSTIC_VARY + "uniform float uTime;\nuniform float uCaustic;\n" +
@@ -698,102 +725,512 @@ function Jellyfish() {
   );
 }
 
+/* ===================================================================== *
+ *  Detailed 3D pass-by creatures (turtle / shark / manta / whale)        *
+ *  — real geometry with countershaded colours + a lit, swimming material *
+ *  that replaces the old flat SDF billboards.                            *
+ * ===================================================================== */
+const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+const V2 = (x: number, y: number) => new THREE.Vector2(x, y);
+
+/* Paint a geometry (flat colour or per-vertex fn), non-indexed + normals so all
+   the parts merge cleanly into one lit creature mesh (position/normal/uv/color). */
+function paintGeo(
+  geo: THREE.BufferGeometry,
+  color: THREE.Color | ((x: number, y: number, z: number, ny: number) => THREE.Color),
+) {
+  const g = geo.index ? geo.toNonIndexed() : geo;
+  g.computeVertexNormals();
+  const p = g.attributes.position;
+  const nn = g.attributes.normal;
+  const col = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    const c = typeof color === "function" ? color(p.getX(i), p.getY(i), p.getZ(i), nn.getY(i)) : color;
+    col[i * 3] = c.r;
+    col[i * 3 + 1] = c.g;
+    col[i * 3 + 2] = c.b;
+  }
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  return g;
+}
+/* Countershading: darker back (high y) → lighter belly (low y). */
+function shadeY(back: string, belly: string, lo: number, hi: number) {
+  const b = new THREE.Color(back);
+  const be = new THREE.Color(belly);
+  return (_x: number, y: number) => new THREE.Color().copy(be).lerp(b, THREE.MathUtils.smoothstep(y, lo, hi));
+}
+
+/* Lit material for a single (non-instanced) creature mesh: a tail-swim wiggle
+   toward the tail (-x) and an optional wing/fluke flap (scales with |z|). */
+function makeCreatureMaterial(
+  uTime: { value: number },
+  opts?: { wiggle?: number; flap?: number; wigFreq?: number },
+) {
+  const wiggle = opts?.wiggle ?? 0.12;
+  const flap = opts?.flap ?? 0;
+  const wigFreq = opts?.wigFreq ?? 2.6;
+  const m = new THREE.MeshLambertMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: 0,
+    fog: true,
+    side: THREE.DoubleSide,
+  });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uWig = { value: wiggle };
+    sh.uniforms.uFlap = { value: flap };
+    sh.uniforms.uWigFreq = { value: wigFreq };
+    sh.vertexShader =
+      "uniform float uWig;\nuniform float uFlap;\nuniform float uWigFreq;\n" +
+      sh.vertexShader.replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+         float tt = smoothstep(0.3, -1.0, position.x);              // stronger toward the tail
+         transformed.z += sin(uTime * uWigFreq + position.x * 2.2) * tt * uWig;
+         transformed.y += sin(uTime * 1.7) * abs(position.z) * uFlap; // wing / fluke stroke`,
+      );
+    injectCaustic(sh, uTime, 0.28, false);
+  };
+  return m;
+}
+
+/* Sea turtle: domed scute-seamed carapace, cream plastron, head + 4 paddle
+   flippers + tail. Nose at +x. */
+function makeTurtleGeometry() {
+  const parts: THREE.BufferGeometry[] = [];
+  const shell = new THREE.SphereGeometry(1, 22, 14, 0, Math.PI * 2, 0, Math.PI * 0.55);
+  shell.scale(1.25, 0.5, 1.0);
+  const sp = shell.attributes.position;
+  const sv = new THREE.Vector3();
+  for (let i = 0; i < sp.count; i++) {
+    sv.fromBufferAttribute(sp, i);
+    const bump = Math.sin(Math.atan2(sv.z, sv.x) * 6.0) * Math.sin(sv.x * 3.0) * 0.03;
+    sv.multiplyScalar(1 + bump);
+    sp.setXYZ(i, sv.x, sv.y, sv.z);
+  }
+  parts.push(
+    paintGeo(shell, (x, _y, z) => {
+      const seam = Math.sin(Math.atan2(z, x) * 6.0) * Math.sin(x * 3.0);
+      return new THREE.Color("#41704d").lerp(new THREE.Color("#2c4d36"), Math.max(0, -seam) * 0.6);
+    }),
+  );
+  const belly = new THREE.SphereGeometry(0.95, 18, 10, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5);
+  belly.scale(1.2, 0.32, 0.95);
+  parts.push(paintGeo(belly, new THREE.Color("#cdbb8c")));
+  const neck = new THREE.CylinderGeometry(0.15, 0.2, 0.45, 10);
+  neck.rotateZ(Math.PI / 2);
+  neck.translate(1.15, 0.02, 0);
+  parts.push(paintGeo(neck, new THREE.Color("#4c7f5a")));
+  const head = new THREE.SphereGeometry(0.24, 14, 12);
+  head.scale(1.35, 0.9, 0.85);
+  head.translate(1.5, 0.06, 0);
+  parts.push(paintGeo(head, new THREE.Color("#4c7f5a")));
+  [1, -1].forEach((s) => {
+    const e = new THREE.SphereGeometry(0.05, 8, 6);
+    e.translate(1.63, 0.12, 0.14 * s);
+    parts.push(paintGeo(e, new THREE.Color("#0a0f14")));
+  });
+  const flip = (sx: number, sy: number, sz: number, px: number, pz: number, ry: number, col: string) => {
+    const f = new THREE.SphereGeometry(1, 10, 8);
+    f.scale(sx, sy, sz);
+    f.rotateZ(0.15);
+    f.rotateY(ry);
+    f.translate(px, -0.02, pz);
+    parts.push(paintGeo(f, new THREE.Color(col)));
+  };
+  flip(0.75, 0.08, 0.3, 0.55, 0.7, 0.5, "#4c7f5a");
+  flip(0.75, 0.08, 0.3, 0.55, -0.7, -0.5, "#4c7f5a");
+  flip(0.45, 0.07, 0.22, -0.75, 0.55, -0.4, "#477657");
+  flip(0.45, 0.07, 0.22, -0.75, -0.55, 0.4, "#477657");
+  const tail = new THREE.ConeGeometry(0.09, 0.32, 8);
+  tail.rotateZ(Math.PI / 2);
+  tail.translate(-1.15, 0, 0);
+  parts.push(paintGeo(tail, new THREE.Color("#477657")));
+  return mergeGeometries(parts)!;
+}
+
+/* Shark: fusiform countershaded body, tall dorsal + 2nd dorsal, pectorals and a
+   heterocercal (uneven) caudal fin. Nose at +x. */
+function makeSharkGeometry() {
+  const parts: THREE.BufferGeometry[] = [];
+  const profile = [V2(0.015, -1.15), V2(0.12, -0.7), V2(0.22, -0.2), V2(0.26, 0.2), V2(0.2, 0.6), V2(0.1, 0.95), V2(0.015, 1.25)];
+  const body = new THREE.LatheGeometry(profile, 16);
+  body.rotateZ(-Math.PI / 2);
+  parts.push(paintGeo(body, shadeY("#7a8791", "#dfe4e7", -0.22, 0.1)));
+  const fin = "#6d7a84";
+  parts.push(paintGeo(makeTri3(V(0.15, 0.24, 0), V(-0.4, 0.24, 0), V(-0.15, 0.9, 0)), new THREE.Color(fin))); // dorsal
+  parts.push(paintGeo(makeTri3(V(-0.7, 0.2, 0), V(-0.95, 0.2, 0), V(-0.8, 0.4, 0)), new THREE.Color(fin))); // 2nd dorsal
+  [1, -1].forEach((s) =>
+    parts.push(paintGeo(makeTri3(V(0.25, -0.12, 0.12 * s), V(0.05, -0.15, 0.12 * s), V(-0.15, -0.5, 0.5 * s)), new THREE.Color(fin))),
+  );
+  parts.push(paintGeo(makeTri3(V(-1.05, 0, 0), V(-1.7, 0.75, 0), V(-1.2, 0.08, 0)), new THREE.Color(fin))); // upper caudal lobe
+  parts.push(paintGeo(makeTri3(V(-1.05, 0, 0), V(-1.2, -0.08, 0), V(-1.45, -0.4, 0)), new THREE.Color(fin))); // lower lobe
+  [1, -1].forEach((s) => {
+    const e = new THREE.SphereGeometry(0.04, 6, 5);
+    e.translate(0.85, 0.06, 0.14 * s);
+    parts.push(paintGeo(e, new THREE.Color("#0a0f14")));
+  });
+  return mergeGeometries(parts)!;
+}
+
+/* Manta ray: flattened countershaded body disc, two swept delta wings, forward
+   cephalic fins and a whip tail. Nose at +x, wings span ±z (flap in the shader). */
+function makeMantaGeometry() {
+  const parts: THREE.BufferGeometry[] = [];
+  const top = "#33404d";
+  const bodyGeo = new THREE.SphereGeometry(1, 18, 12);
+  bodyGeo.scale(0.85, 0.16, 0.5);
+  parts.push(paintGeo(bodyGeo, shadeY(top, "#e7ecee", -0.06, 0.06)));
+  const wing = (sz: number) => {
+    const rf = V(0.55, 0.05, 0.28 * sz);
+    const rb = V(-0.65, 0.05, 0.28 * sz);
+    const tb = V(-0.25, -0.05, 1.75 * sz);
+    const tf = V(0.2, -0.02, 1.35 * sz);
+    parts.push(paintGeo(makeTri3(rf, tf, tb), new THREE.Color(top)));
+    parts.push(paintGeo(makeTri3(rf, tb, rb), new THREE.Color(top)));
+  };
+  wing(1);
+  wing(-1);
+  [1, -1].forEach((s) => {
+    const c = new THREE.BoxGeometry(0.4, 0.05, 0.09);
+    c.rotateZ(0.2);
+    c.translate(0.72, 0.0, 0.14 * s);
+    parts.push(paintGeo(c, new THREE.Color(top)));
+  });
+  const tail = new THREE.CylinderGeometry(0.015, 0.05, 1.4, 6);
+  tail.rotateZ(Math.PI / 2);
+  tail.translate(-1.0, 0.02, 0);
+  parts.push(paintGeo(tail, new THREE.Color(top)));
+  return mergeGeometries(parts)!;
+}
+
+/* Whale: large streamlined countershaded body, horizontal fluke, long pectoral
+   flippers, small dorsal and eyes. Nose at +x. */
+function makeWhaleGeometry() {
+  const parts: THREE.BufferGeometry[] = [];
+  const back = "#3b4a5a";
+  const profile = [V2(0.02, -1.3), V2(0.14, -0.85), V2(0.28, -0.25), V2(0.34, 0.3), V2(0.27, 0.8), V2(0.13, 1.15), V2(0.02, 1.32)];
+  const body = new THREE.LatheGeometry(profile, 18);
+  body.rotateZ(-Math.PI / 2);
+  parts.push(paintGeo(body, shadeY(back, "#9aa6b2", -0.28, 0.14)));
+  parts.push(paintGeo(makeTri3(V(-1.15, 0, 0), V(-1.75, 0.02, 0.75), V(-1.25, 0, 0.08)), new THREE.Color(back))); // fluke R
+  parts.push(paintGeo(makeTri3(V(-1.15, 0, 0), V(-1.25, 0, -0.08), V(-1.75, 0.02, -0.75)), new THREE.Color(back))); // fluke L
+  [1, -1].forEach((s) => {
+    const f = new THREE.SphereGeometry(1, 8, 6);
+    f.scale(0.5, 0.06, 0.16);
+    f.rotateY(-0.5 * s);
+    f.rotateZ(-0.3);
+    f.translate(0.25, -0.12, 0.32 * s);
+    parts.push(paintGeo(f, new THREE.Color(back)));
+  });
+  parts.push(paintGeo(makeTri3(V(-0.75, 0.32, 0), V(-1.05, 0.32, 0), V(-0.9, 0.6, 0)), new THREE.Color(back))); // dorsal
+  [1, -1].forEach((s) => {
+    const e = new THREE.SphereGeometry(0.045, 6, 5);
+    e.translate(1.05, 0.02, 0.22 * s);
+    parts.push(paintGeo(e, new THREE.Color("#0a0f14")));
+  });
+  return mergeGeometries(parts)!;
+}
+
+/* A thin rod (rope/rail/spar) between two points — for rigging and railings. */
+function rodGeo(a: THREE.Vector3, b: THREE.Vector3, r: number) {
+  const dir = new THREE.Vector3().subVectors(b, a);
+  const len = Math.max(1e-4, dir.length());
+  const c = new THREE.CylinderGeometry(r, r, len, 6);
+  c.translate(0, len / 2, 0);
+  c.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()));
+  c.translate(a.x, a.y, a.z);
+  return c;
+}
+
+/* A detailed sailboat (bow at +x): deformed hull with a red boot-stripe waterline,
+   deck, cabin (roof, windows, portholes, door), mast + boom, mainsail + jib + flag,
+   plus stainless railings, standing rigging (fore/back stays + shrouds), bowsprit,
+   rudder + tiller, deck winches and a life ring. */
+function makeBoatGeometry() {
+  const parts: THREE.BufferGeometry[] = [];
+  const wood = new THREE.Color("#c9b48f");
+  const steel = new THREE.Color("#cfd3d6");
+  const rope = new THREE.Color("#33383c");
+
+  // hull — pinch to a point at the bow, taper the stern, narrow toward the keel.
+  const hull = new THREE.BoxGeometry(3.4, 0.6, 1.05, 12, 3, 6);
+  const hp = hull.attributes.position;
+  const hv = new THREE.Vector3();
+  for (let i = 0; i < hp.count; i++) {
+    hv.fromBufferAttribute(hp, i);
+    const fx = hv.x / 1.7;
+    const bow = THREE.MathUtils.smoothstep(fx, 0.2, 1.0);
+    const stern = THREE.MathUtils.smoothstep(-fx, 0.45, 1.0);
+    hv.z *= (1 - bow * 0.95) * (1 - stern * 0.22);
+    if (hv.y < 0) hv.z *= 1 - (-hv.y / 0.3) * 0.35;
+    hv.y += bow * 0.2 + stern * 0.1;
+    hv.x += bow * 0.18;
+    hp.setXYZ(i, hv.x, hv.y, hv.z);
+  }
+  hull.computeVertexNormals();
+  parts.push(
+    paintGeo(hull, (_x, y) =>
+      y > 0.06 ? new THREE.Color("#ece7db") : y > -0.02 ? new THREE.Color("#b23a2e") : new THREE.Color("#7a5230"),
+    ),
+  );
+
+  // deck (pinched to the bow)
+  const deck = new THREE.BoxGeometry(2.8, 0.05, 0.8, 8, 1, 4);
+  const dp = deck.attributes.position;
+  const dv = new THREE.Vector3();
+  for (let i = 0; i < dp.count; i++) {
+    dv.fromBufferAttribute(dp, i);
+    const bow = THREE.MathUtils.smoothstep(dv.x / 1.4, 0.2, 1.0);
+    dv.z *= 1 - bow * 0.9;
+    dv.x += bow * 0.15;
+    dp.setXYZ(i, dv.x, dv.y, dv.z);
+  }
+  deck.translate(0, 0.32, 0);
+  parts.push(paintGeo(deck, new THREE.Color("#c99a63")));
+
+  // cabin + roof + side windows + porthole + door
+  const cabin = new THREE.BoxGeometry(1.0, 0.34, 0.62);
+  cabin.translate(-0.35, 0.5, 0);
+  parts.push(paintGeo(cabin, new THREE.Color("#eee9dc")));
+  const roof = new THREE.BoxGeometry(1.08, 0.05, 0.68);
+  roof.translate(-0.35, 0.69, 0);
+  parts.push(paintGeo(roof, new THREE.Color("#5b6b74")));
+  [1, -1].forEach((s) => {
+    const w = new THREE.BoxGeometry(0.5, 0.14, 0.02);
+    w.translate(-0.35, 0.5, 0.32 * s);
+    parts.push(paintGeo(w, new THREE.Color("#16232b")));
+    const port = new THREE.CylinderGeometry(0.06, 0.06, 0.02, 12);
+    port.rotateX(Math.PI / 2);
+    port.translate(0.12, 0.52, 0.32 * s);
+    parts.push(paintGeo(port, new THREE.Color("#16232b")));
+  });
+  const door = new THREE.BoxGeometry(0.02, 0.28, 0.28);
+  door.translate(0.16, 0.47, 0);
+  parts.push(paintGeo(door, new THREE.Color("#6a4a30")));
+
+  // mast + boom + spreaders
+  const mast = new THREE.CylinderGeometry(0.028, 0.038, 2.05, 8);
+  mast.translate(0.2, 1.27, 0);
+  parts.push(paintGeo(mast, wood));
+  const boom = new THREE.CylinderGeometry(0.025, 0.025, 1.35, 6);
+  boom.rotateZ(Math.PI / 2);
+  boom.translate(-0.35, 0.52, 0);
+  parts.push(paintGeo(boom, wood));
+  const spreader = new THREE.CylinderGeometry(0.014, 0.014, 0.5, 5);
+  spreader.rotateX(Math.PI / 2);
+  spreader.translate(0.2, 1.6, 0);
+  parts.push(paintGeo(spreader, steel));
+
+  // sails + flag
+  parts.push(paintGeo(makeTri3(V(0.2, 2.18, 0), V(0.2, 0.56, 0), V(-0.98, 0.6, 0)), new THREE.Color("#f4f1e8"))); // mainsail
+  parts.push(paintGeo(makeTri3(V(0.2, 1.9, 0), V(0.2, 0.6, 0), V(1.35, 0.6, 0)), new THREE.Color("#e9e5d8"))); // jib
+  parts.push(paintGeo(makeTri3(V(0.2, 2.2, 0), V(0.52, 2.13, 0), V(0.2, 2.03, 0)), new THREE.Color("#c0392b"))); // flag
+
+  // standing rigging: fore/back stays + shrouds
+  const mh = V(0.2, 2.18, 0);
+  parts.push(paintGeo(rodGeo(mh, V(1.62, 0.42, 0), 0.011), rope)); // forestay
+  parts.push(paintGeo(rodGeo(mh, V(-1.68, 0.42, 0), 0.011), rope)); // backstay
+  [1, -1].forEach((s) => parts.push(paintGeo(rodGeo(V(0.2, 2.05, 0), V(0.2, 0.42, 0.42 * s), 0.01), rope))); // shrouds
+
+  // guard railings: a rail line each side on short stanchions
+  [1, -1].forEach((s) => {
+    parts.push(paintGeo(rodGeo(V(1.45, 0.6, 0.42 * s), V(-1.6, 0.6, 0.42 * s), 0.014), steel));
+    [1.3, 0.7, 0.0, -0.7, -1.35].forEach((x) => {
+      const st = new THREE.CylinderGeometry(0.013, 0.013, 0.28, 5);
+      st.translate(x, 0.46, 0.42 * s);
+      parts.push(paintGeo(st, steel));
+    });
+  });
+
+  // bowsprit, rudder + tiller
+  parts.push(paintGeo(rodGeo(V(1.5, 0.36, 0), V(2.15, 0.42, 0), 0.03), wood));
+  const rudder = new THREE.BoxGeometry(0.09, 0.55, 0.03);
+  rudder.translate(-1.72, -0.08, 0);
+  parts.push(paintGeo(rudder, new THREE.Color("#5e4327")));
+  parts.push(paintGeo(rodGeo(V(-1.72, 0.22, 0), V(-1.15, 0.5, 0), 0.02), wood)); // tiller
+
+  // deck winches + a life ring on the starboard rail
+  [1, -1].forEach((s) => {
+    const winch = new THREE.CylinderGeometry(0.05, 0.06, 0.09, 10);
+    winch.translate(-0.95, 0.37, 0.24 * s);
+    parts.push(paintGeo(winch, steel));
+  });
+  const ring = new THREE.TorusGeometry(0.13, 0.035, 8, 16);
+  ring.translate(-0.35, 0.5, 0.34);
+  parts.push(paintGeo(ring, new THREE.Color("#d94f3a")));
+
+  return mergeGeometries(parts)!;
+}
+
+/* The sailboat: lit (not caustic — it's above water). Floats statically on the
+   right of the surface, only bobbing and rocking with the swell, and fades out as
+   the camera dives under. */
+function Boat() {
+  const ref = useRef<THREE.Mesh>(null);
+  const geometry = useMemo(makeBoatGeometry, []);
+  const material = useMemo(
+    () => new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0, fog: true, side: THREE.DoubleSide }),
+    [],
+  );
+  useFrame((state) => {
+    const m = ref.current;
+    if (!m) return;
+    const t = state.clock.elapsedTime;
+    material.opacity = 1 - THREE.MathUtils.smoothstep(dayScroll.progress, 0.14, 0.32); // only near the surface
+    m.visible = material.opacity > 0.01;
+    // anchored further to the right — no travel, just float in place
+    m.position.set(16, Math.sin(t * 0.6) * 0.14, -19);
+    m.rotation.set(Math.sin(t * 0.5) * 0.05, -0.28, Math.sin(t * 0.65) * 0.055); // 3/4 heading + swell rock
+  });
+  return <mesh ref={ref} geometry={geometry} material={material} scale={2.3} frustumCulled={false} />;
+}
+
+/* A single gull: streamlined body, head + amber beak, a tail fan, and bent
+   two-segment wings (span along ±z, forward +x) for the classic silhouette.
+   Dark so it reads as a backlit shape against the bright sky. */
+function makeBirdGeometry() {
+  const col = new THREE.Color("#333c44");
+  const parts: THREE.BufferGeometry[] = [];
+  const body = new THREE.SphereGeometry(0.075, 7, 6);
+  body.scale(1.9, 0.85, 0.72);
+  parts.push(paintGeo(body, col));
+  const head = new THREE.SphereGeometry(0.05, 6, 5);
+  head.translate(0.17, 0.03, 0);
+  parts.push(paintGeo(head, col));
+  const beak = new THREE.ConeGeometry(0.02, 0.09, 5);
+  beak.rotateZ(-Math.PI / 2);
+  beak.translate(0.25, 0.02, 0);
+  parts.push(paintGeo(beak, new THREE.Color("#c8863a")));
+  parts.push(paintGeo(makeTri3(V(-0.16, 0, 0), V(-0.3, 0.02, 0.07), V(-0.3, 0.02, -0.07)), col)); // tail fan
+  // bent, two-segment gull wings
+  [1, -1].forEach((s) => {
+    const rf = V(0.1, 0, 0.04 * s);
+    const rb = V(-0.12, 0, 0.04 * s);
+    const mid = V(0.0, 0.05, 0.34 * s);
+    const tip = V(-0.2, 0.0, 0.68 * s);
+    parts.push(paintGeo(makeTri3(rf, mid, rb), col));
+    parts.push(paintGeo(makeTri3(rb, mid, tip), col));
+  });
+  return mergeGeometries(parts)!;
+}
+
+/* Instanced bird material — wing tips (high |z|) flap in the vertex shader, each
+   bird offset by a per-instance phase so the flock isn't in lockstep. */
+function makeBirdMaterial(uTime: { value: number }) {
+  const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, fog: true, side: THREE.DoubleSide });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = uTime;
+    sh.vertexShader =
+      "uniform float uTime;\n" +
+      sh.vertexShader.replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+         float ph = instanceMatrix[3].x * 1.3 + instanceMatrix[3].z * 0.7;
+         transformed.y += sin(uTime * 7.0 + ph) * abs(position.z) * 0.85;`,
+      );
+  };
+  return m;
+}
+
+/* A flock flying in a V-formation across the sky: instance matrices lay out the
+   V once, the group drifts slowly (wrapping) with a gentle bob, wings flap in the
+   shader. Above the water — fades out as the camera dives under. */
+function Birds() {
+  const group = useRef<THREE.Group>(null);
+  const uTime = useMemo(() => ({ value: 0 }), []);
+  const geometry = useMemo(makeBirdGeometry, []);
+  const material = useMemo(() => makeBirdMaterial(uTime), [uTime]);
+  const matrices = useMemo(() => {
+    const d = new THREE.Object3D();
+    const arr: THREE.Matrix4[] = [];
+    const place = (x: number, y: number, z: number, sc: number) => {
+      d.position.set(x, y, z);
+      d.rotation.set(0, 0, 0);
+      d.scale.setScalar(sc);
+      d.updateMatrix();
+      arr.push(d.matrix.clone());
+    };
+    place(0, 0, 0, 1.15); // leader
+    for (let k = 1; k <= 8; k++) {
+      const jy = (Math.random() - 0.5) * 0.3;
+      const jx = (Math.random() - 0.5) * 0.3; // stagger so the lines aren't rigid
+      place(-k * 0.85 + jx, jy, -k * 0.6, 0.82 + Math.random() * 0.3); // left echelon
+      place(-k * 0.85 - jx, -jy, k * 0.6, 0.82 + Math.random() * 0.3); // right echelon
+    }
+    return arr;
+  }, []);
+  useFrame((state) => {
+    uTime.value = state.clock.elapsedTime;
+    const g = group.current;
+    if (!g) return;
+    const t = state.clock.elapsedTime;
+    material.opacity = (1 - THREE.MathUtils.smoothstep(dayScroll.progress, 0.14, 0.32)) * 0.92;
+    g.visible = material.opacity > 0.01;
+    const x = ((t * 1.1 + 45) % 92) - 46; // drift across the sky, wrapping
+    g.position.set(x, 8 + Math.sin(t * 0.2) * 0.6, -28 + Math.sin(t * 0.13) * 4); // gentle bob
+  });
+  return (
+    <group ref={group}>
+      <instancedMesh
+        ref={(m) => {
+          if (m && !m.userData.set) {
+            matrices.forEach((mm, i) => m.setMatrixAt(i, mm));
+            m.instanceMatrix.needsUpdate = true;
+            m.userData.set = true;
+          }
+        }}
+        args={[geometry, material, matrices.length]}
+        frustumCulled={false}
+      />
+    </group>
+  );
+}
+
 /* ------------------------------ Manta ------------------------------- */
-const mantaFrag = /* glsl */ `
-  precision mediump float;
-  uniform float uFade;
-  varying vec2 vUv;
-  float sdSeg(vec2 p, vec2 a, vec2 b, float r){
-    vec2 pa = p - a, ba = b - a;
-    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(pa - ba * h) - r;
-  }
-  void main(){
-    vec2 q = vUv - 0.5;
-    float body = length(q / vec2(0.44, 0.14)) - 1.0;
-    float tail = sdSeg(q, vec2(0.0, 0.0), vec2(0.0, -0.42), 0.012);
-    float d = min(body, tail);
-    float a = smoothstep(0.01, -0.01, d) * uFade * 0.68;
-    gl_FragColor = vec4(vec3(0.02, 0.05, 0.09), a);
-  }
-`;
 function Manta() {
   const mesh = useRef<THREE.Mesh>(null);
-  const { camera } = useThree();
-  const uniforms = useMemo(() => ({ uFade: { value: 0 } }), []);
+  const uTime = useMemo(() => ({ value: 0 }), []);
+  const geometry = useMemo(makeMantaGeometry, []);
+  const material = useMemo(() => makeCreatureMaterial(uTime, { wiggle: 0.05, flap: 0.16, wigFreq: 1.8 }), [uTime]);
   useFrame((state) => {
     const m = mesh.current;
     if (!m) return;
     const t = state.clock.elapsedTime;
-    const u = winU(dayScroll.progress, 0.46, 0.6); // ray glides through the ruins
-    uniforms.uFade.value = bell(u);
+    uTime.value = t;
+    const u = winU(dayScroll.progress, 0.46, 0.6); // ray glides through the reef valley
+    material.opacity = bell(u) * 0.96;
     m.position.set(
       THREE.MathUtils.lerp(-32, 32, u),
       -13 + Math.sin(t * 0.5) * 0.8,
       THREE.MathUtils.lerp(-30, -18, Math.sin(u * Math.PI)),
     );
-    m.lookAt(camera.position);
-    m.rotateZ(Math.sin(t * 0.2) * 0.08);
+    m.rotation.set(Math.sin(t * 0.3) * 0.06, 0, Math.sin(t * 0.2) * 0.05);
   });
-  return (
-    <mesh ref={mesh}>
-      <planeGeometry args={[15, 15]} />
-      <shaderMaterial
-        uniforms={uniforms}
-        vertexShader={diverVert}
-        fragmentShader={mantaFrag}
-        transparent
-        depthWrite={false}
-      />
-    </mesh>
-  );
+  return <mesh ref={mesh} geometry={geometry} material={material} scale={5} frustumCulled={false} />;
 }
 
 /* ------------------------------ Whale ------------------------------- */
-const whaleFrag = /* glsl */ `
-  precision mediump float;
-  uniform float uFade;
-  varying vec2 vUv;
-  float sdSeg(vec2 p, vec2 a, vec2 b, float r){
-    vec2 pa = p - a, ba = b - a;
-    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(pa - ba * h) - r;
-  }
-  void main(){
-    vec2 q = vUv - 0.5;
-    float body = length(q / vec2(0.46, 0.16)) - 1.0;
-    float fluke = min(sdSeg(q, vec2(-0.4, 0.0), vec2(-0.5, 0.13), 0.02),
-                      sdSeg(q, vec2(-0.4, 0.0), vec2(-0.5, -0.13), 0.02));
-    float pec = sdSeg(q, vec2(0.05, -0.10), vec2(0.17, -0.25), 0.03);
-    float d = min(min(body, fluke), pec);
-    float a = smoothstep(0.008, -0.008, d) * uFade * 0.6;
-    gl_FragColor = vec4(vec3(0.02, 0.05, 0.08), a);
-  }
-`;
 function Whale() {
   const mesh = useRef<THREE.Mesh>(null);
-  const { camera } = useThree();
-  const uniforms = useMemo(() => ({ uFade: { value: 0 } }), []);
+  const uTime = useMemo(() => ({ value: 0 }), []);
+  const geometry = useMemo(makeWhaleGeometry, []);
+  const material = useMemo(() => makeCreatureMaterial(uTime, { wiggle: 0.06, flap: 0.05, wigFreq: 1.4 }), [uTime]);
   useFrame((state) => {
     const m = mesh.current;
     if (!m) return;
     const t = state.clock.elapsedTime;
-    const u = winU(dayScroll.progress, 0.78, 0.94); // whale crosses the canyon far off
-    uniforms.uFade.value = bell(u);
+    uTime.value = t;
+    const u = winU(dayScroll.progress, 0.78, 0.94); // whale crosses the deep far off
+    material.opacity = bell(u) * 0.95;
     m.position.set(
       THREE.MathUtils.lerp(-34, 34, u),
       -16 + Math.sin(t * 0.25) * 1.0,
       THREE.MathUtils.lerp(-46, -34, Math.sin(u * Math.PI)),
     );
-    m.lookAt(camera.position);
-    m.rotateZ(Math.sin(t * 0.12) * 0.05);
+    m.rotation.set(Math.sin(t * 0.18) * 0.04, 0, Math.sin(t * 0.12) * 0.04);
   });
-  return (
-    <mesh ref={mesh}>
-      <planeGeometry args={[36, 18]} />
-      <shaderMaterial uniforms={uniforms} vertexShader={diverVert} fragmentShader={whaleFrag} transparent depthWrite={false} />
-    </mesh>
-  );
+  return <mesh ref={mesh} geometry={geometry} material={material} scale={11} frustumCulled={false} />;
 }
 
 /* -------------------------- Bubble columns -------------------------- */
@@ -916,46 +1353,23 @@ function School() {
 }
 
 /* ------------------------------ Sharks ------------------------------ */
-const sharkFrag = /* glsl */ `
-  precision mediump float;
-  uniform float uFade;
-  varying vec2 vUv;
-  float sdTri(vec2 p, vec2 a, vec2 b, vec2 c){
-    vec2 e0=b-a, e1=c-b, e2=a-c, v0=p-a, v1=p-b, v2=p-c;
-    vec2 pq0=v0-e0*clamp(dot(v0,e0)/dot(e0,e0),0.,1.);
-    vec2 pq1=v1-e1*clamp(dot(v1,e1)/dot(e1,e1),0.,1.);
-    vec2 pq2=v2-e2*clamp(dot(v2,e2)/dot(e2,e2),0.,1.);
-    float s=sign(e0.x*e2.y-e0.y*e2.x);
-    vec2 d=min(min(vec2(dot(pq0,pq0),s*(v0.x*e0.y-v0.y*e0.x)),vec2(dot(pq1,pq1),s*(v1.x*e1.y-v1.y*e1.x))),vec2(dot(pq2,pq2),s*(v2.x*e2.y-v2.y*e2.x)));
-    return -sqrt(d.x)*sign(d.y);
-  }
-  void main(){
-    vec2 q = vUv - 0.5;
-    float body = length(q / vec2(0.44, 0.12)) - 1.0;
-    float dorsal = sdTri(q, vec2(0.06, 0.10), vec2(-0.06, 0.10), vec2(-0.02, 0.33));
-    float pect = sdTri(q, vec2(0.05, -0.02), vec2(0.17, -0.03), vec2(0.03, -0.22));
-    float tailU = sdTri(q, vec2(-0.40, 0.0), vec2(-0.58, 0.24), vec2(-0.44, 0.0));
-    float tailL = sdTri(q, vec2(-0.40, 0.0), vec2(-0.50, -0.12), vec2(-0.44, 0.0));
-    float d = min(min(min(body, dorsal), min(pect, tailU)), tailL);
-    float a = smoothstep(0.008, -0.008, d) * uFade * 0.7;
-    gl_FragColor = vec4(vec3(0.02, 0.05, 0.08), a);
-  }
-`;
 function Sharks() {
   const group = useRef<THREE.Group>(null);
-  const { camera } = useThree();
+  const uTime = useMemo(() => ({ value: 0 }), []);
+  const geometry = useMemo(makeSharkGeometry, []);
   const sharks = useMemo(
     () => [
-      { y: -8, z: -26, dir: 1, size: 20, win: [0.74, 0.85] as [number, number], u: { uFade: { value: 0 } } },
-      { y: -13, z: -32, dir: -1, size: 27, win: [0.8, 0.9] as [number, number], u: { uFade: { value: 0 } } },
+      { y: -8, z: -26, dir: 1, size: 6.5, win: [0.74, 0.85] as [number, number], mat: makeCreatureMaterial(uTime, { wiggle: 0.13, wigFreq: 2.8 }) },
+      { y: -13, z: -32, dir: -1, size: 8.5, win: [0.8, 0.9] as [number, number], mat: makeCreatureMaterial(uTime, { wiggle: 0.13, wigFreq: 2.6 }) },
     ],
-    [],
+    [uTime],
   );
   useFrame((state) => {
     const g = group.current;
     if (!g) return;
     const t = state.clock.elapsedTime;
-    const range = 62;
+    uTime.value = t;
+    const range = 64;
     for (let i = 0; i < sharks.length; i++) {
       const s = sharks[i];
       const child = g.children[i] as THREE.Mesh;
@@ -963,74 +1377,41 @@ function Sharks() {
       const x = s.dir === 1 ? THREE.MathUtils.lerp(-range, range, u) : THREE.MathUtils.lerp(range, -range, u);
       const z = THREE.MathUtils.lerp(s.z, s.z + 8, Math.sin(u * Math.PI)); // approach mid, then recede
       child.position.set(x, s.y + Math.sin(t * 0.4 + i) * 0.8, z);
-      child.lookAt(camera.position);
-      child.scale.set(s.size * s.dir, s.size, 1); // flip to face travel direction
-      s.u.uFade.value = bell(u);
+      child.rotation.set(0, s.dir === 1 ? 0 : Math.PI, Math.sin(t * 0.5 + i) * 0.05); // face travel direction
+      child.scale.setScalar(s.size);
+      s.mat.opacity = bell(u) * 0.95;
     }
   });
   return (
     <group ref={group}>
       {sharks.map((s, i) => (
-        <mesh key={i}>
-          <planeGeometry args={[1, 1]} />
-          <shaderMaterial uniforms={s.u} vertexShader={diverVert} fragmentShader={sharkFrag} transparent depthWrite={false} side={THREE.DoubleSide} />
-        </mesh>
+        <mesh key={i} geometry={geometry} material={s.mat} frustumCulled={false} />
       ))}
     </group>
   );
 }
 
 /* ------------------------------ Turtle ------------------------------ */
-const turtleFrag = /* glsl */ `
-  precision mediump float;
-  uniform float uFade;
-  varying vec2 vUv;
-  float sdTri(vec2 p, vec2 a, vec2 b, vec2 c){
-    vec2 e0=b-a, e1=c-b, e2=a-c, v0=p-a, v1=p-b, v2=p-c;
-    vec2 pq0=v0-e0*clamp(dot(v0,e0)/dot(e0,e0),0.,1.);
-    vec2 pq1=v1-e1*clamp(dot(v1,e1)/dot(e1,e1),0.,1.);
-    vec2 pq2=v2-e2*clamp(dot(v2,e2)/dot(e2,e2),0.,1.);
-    float s=sign(e0.x*e2.y-e0.y*e2.x);
-    vec2 d=min(min(vec2(dot(pq0,pq0),s*(v0.x*e0.y-v0.y*e0.x)),vec2(dot(pq1,pq1),s*(v1.x*e1.y-v1.y*e1.x))),vec2(dot(pq2,pq2),s*(v2.x*e2.y-v2.y*e2.x)));
-    return -sqrt(d.x)*sign(d.y);
-  }
-  void main(){
-    vec2 q = vUv - 0.5;
-    float shell = length(q / vec2(0.24, 0.19)) - 1.0;
-    float head = length(q - vec2(0.29, 0.0)) - 0.07;
-    float f1 = sdTri(q, vec2(0.12, 0.10), vec2(0.31, 0.22), vec2(0.14, 0.02));
-    float f2 = sdTri(q, vec2(0.12, -0.10), vec2(0.31, -0.22), vec2(0.14, -0.02));
-    float f3 = sdTri(q, vec2(-0.14, 0.08), vec2(-0.31, 0.18), vec2(-0.16, 0.0));
-    float f4 = sdTri(q, vec2(-0.14, -0.08), vec2(-0.31, -0.18), vec2(-0.16, 0.0));
-    float d = min(min(min(shell, head), min(f1, f2)), min(f3, f4));
-    float a = smoothstep(0.008, -0.008, d) * uFade * 0.66;
-    gl_FragColor = vec4(vec3(0.03, 0.07, 0.09), a);
-  }
-`;
 function Turtle() {
   const mesh = useRef<THREE.Mesh>(null);
-  const { camera } = useThree();
-  const uniforms = useMemo(() => ({ uFade: { value: 0 } }), []);
+  const uTime = useMemo(() => ({ value: 0 }), []);
+  const geometry = useMemo(makeTurtleGeometry, []);
+  const material = useMemo(() => makeCreatureMaterial(uTime, { wiggle: 0.03, flap: 0.06, wigFreq: 2.2 }), [uTime]);
   useFrame((state) => {
     const m = mesh.current;
     if (!m) return;
     const t = state.clock.elapsedTime;
-    const u = winU(dayScroll.progress, 0.2, 0.34); // turtle crosses the coral kingdom
-    uniforms.uFade.value = bell(u);
+    uTime.value = t;
+    const u = winU(dayScroll.progress, 0.2, 0.34); // turtle crosses the coral garden
+    material.opacity = bell(u) * 0.96;
     m.position.set(
       THREE.MathUtils.lerp(-22, 22, u),
       -9 + Math.sin(t * 0.6) * 0.4,
       THREE.MathUtils.lerp(-24, -13, Math.sin(u * Math.PI)),
     );
-    m.lookAt(camera.position);
-    m.rotateZ(Math.sin(t * 0.5) * 0.08);
+    m.rotation.set(Math.sin(t * 0.4) * 0.06, 0, Math.sin(t * 0.5) * 0.06);
   });
-  return (
-    <mesh ref={mesh}>
-      <planeGeometry args={[9, 9]} />
-      <shaderMaterial uniforms={uniforms} vertexShader={diverVert} fragmentShader={turtleFrag} transparent depthWrite={false} />
-    </mesh>
-  );
+  return <mesh ref={mesh} geometry={geometry} material={material} scale={3.2} frustumCulled={false} />;
 }
 
 /* --------------------- Algae / green moss (kaai) -------------------- */
@@ -1513,8 +1894,8 @@ function ScatterBed({
   count,
   palette,
   fade,
-  area = 42,
-  zBack = 32,
+  area = 52,
+  zBack = 36,
   zFront = 5,
   y = -20,
   sMin = 0.6,
@@ -1869,6 +2250,8 @@ export default function SeaLife() {
   return (
     <>
       <ReefClock />
+      <Boat />
+      <Birds />
       <Fish />
       <School />
       <ReefLife />
