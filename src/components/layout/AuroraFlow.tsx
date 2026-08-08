@@ -278,82 +278,96 @@ function NightStars({ count }: { count: number }) {
   );
 }
 
-/* Day: soft glowing motes drifting gently upward — refined and glass-friendly. */
-const moteVert = /* glsl */ `
-  uniform float uTime;
-  attribute float aSeed;
-  attribute vec3 aCol;
-  varying float vA;
-  varying vec3 vCol;
+/* Day: real 3D glass bubbles drifting up. A fresnel shader gives each sphere a
+   bright glassy rim + a faint iridescent tint and a transparent centre, so they
+   read as genuine three-dimensional orbs — refined and on-brand for the glass theme. */
+const bubbleVert = /* glsl */ `
+  varying vec3 vN;
+  varying vec3 vV;
   void main() {
-    vec3 p = position;
-    p.y = mod(position.y + uTime * (0.32 + aSeed * 0.3) + aSeed * 9.0, 9.0) - 4.5; // rise + wrap
-    p.x += sin(uTime * 0.3 + aSeed * 6.28) * 0.7;                                   // gentle sway
-    vCol = aCol;
-    vA = 0.28 + 0.4 * (0.5 + 0.5 * sin(uTime * 0.7 + aSeed * 6.28));                // soft twinkle
-    vec4 mv = modelViewMatrix * vec4(p, 1.0);
-    gl_Position = projectionMatrix * mv;
-    gl_PointSize = (46.0 / -mv.z) * (0.35 + aSeed * 0.7);
+    vec4 wp = modelMatrix * vec4(position, 1.0);
+    vN = normalize(mat3(modelMatrix) * normal);
+    vV = normalize(cameraPosition - wp.xyz);
+    gl_Position = projectionMatrix * viewMatrix * wp;
   }
 `;
-const moteFrag = /* glsl */ `
+const bubbleFrag = /* glsl */ `
   precision mediump float;
-  varying float vA;
-  varying vec3 vCol;
+  uniform vec3 uColor;
+  uniform float uOpacity;
+  varying vec3 vN;
+  varying vec3 vV;
   void main() {
-    float d = distance(gl_PointCoord, vec2(0.5));
-    if (d > 0.5) discard;
-    float core = smoothstep(0.5, 0.0, d);
-    gl_FragColor = vec4(vCol, core * core * vA);
+    float fres = pow(1.0 - max(dot(normalize(vN), normalize(vV)), 0.0), 2.3); // glassy rim
+    vec3 irid = 0.16 * vec3(vN.x, vN.y, -vN.x);                               // faint iridescence
+    float a = (fres * 0.92 + 0.05) * uOpacity;
+    gl_FragColor = vec4(uColor + irid, a);
   }
 `;
-const MOTE_HUES = ["#7c8cff", "#6cc6f0", "#b79cff", "#f0a0c8"];
 
-function DayMotes({ count }: { count: number }) {
-  const uniforms = useMemo(() => ({ uTime: { value: 0 } }), []);
-  const geometry = useMemo(() => {
-    const pal = MOTE_HUES.map((c) => new THREE.Color(c));
-    const pos = new Float32Array(count * 3);
-    const seed = new Float32Array(count);
-    const col = new Float32Array(count * 3);
+function DayBubbles({ count }: { count: number }) {
+  const group = useRef<THREE.Group>(null);
+  const { size } = useThree();
+  const geo = useMemo(() => new THREE.SphereGeometry(1, 18, 14), []);
+  const material = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: { uColor: { value: new THREE.Color("#c9d6ff") }, uOpacity: { value: 0.9 } },
+        vertexShader: bubbleVert,
+        fragmentShader: bubbleFrag,
+        transparent: true,
+        depthWrite: false,
+      }),
+    [],
+  );
+  const items = useMemo(
+    () =>
+      Array.from({ length: count }, () => ({
+        x: (Math.random() - 0.5) * 15,
+        y: (Math.random() - 0.5) * 8,
+        z: -0.5 - Math.random() * 3.5,
+        speed: 0.35 + Math.random() * 0.5,
+        swayFreq: 0.5 + Math.random() * 0.7,
+        phase: Math.random() * 6.28,
+        scale: 0.32 + Math.random() * 0.55,
+        spin: (Math.random() - 0.5) * 0.01,
+      })),
+    [count],
+  );
+  useFrame((state, dt) => {
+    const g = group.current;
+    if (!g) return;
+    const d = Math.min(dt, 0.05);
+    const t = state.clock.elapsedTime;
+    const aspect = size.width / Math.max(1, size.height);
+    const halfH = Math.tan((50 * Math.PI) / 180 / 2) * 6;
+    const halfW = halfH * aspect;
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 15;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 8;
-      pos[i * 3 + 2] = -1 - Math.random() * 4;
-      seed[i] = Math.random();
-      const c = pal[Math.floor(Math.random() * pal.length)];
-      col[i * 3] = c.r;
-      col[i * 3 + 1] = c.g;
-      col[i * 3 + 2] = c.b;
+      const it = items[i];
+      const c = g.children[i] as THREE.Mesh;
+      it.y += it.speed * d; // rise
+      if (it.y > halfH + 1.2) {
+        it.y = -halfH - 1.2;
+        it.x = (Math.random() - 0.5) * 2 * halfW;
+      }
+      c.position.set(it.x + Math.sin(t * it.swayFreq + it.phase) * 0.5, it.y, it.z);
+      c.rotation.y += it.spin;
+      c.scale.setScalar(it.scale);
     }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    g.setAttribute("aSeed", new THREE.BufferAttribute(seed, 1));
-    g.setAttribute("aCol", new THREE.BufferAttribute(col, 3));
-    return g;
-  }, [count]);
-  useFrame((_, dt) => {
-    uniforms.uTime.value += Math.min(dt, 0.05);
   });
   return (
-    <points geometry={geometry} frustumCulled={false}>
-      <shaderMaterial
-        uniforms={uniforms}
-        vertexShader={moteVert}
-        fragmentShader={moteFrag}
-        transparent
-        depthTest={false}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
+    <group ref={group}>
+      {items.map((_, i) => (
+        <mesh key={i} geometry={geo} material={material} />
+      ))}
+    </group>
   );
 }
 
-/** Theme-driven accents: soft drifting light motes for the day (light) theme,
+/** Theme-driven accents: 3D glass bubbles drifting up for the day (light) theme,
     shooting stars streaking at random for the night (dark) theme. */
 function FallingBits({ isLight, count }: { isLight: boolean; count: number }) {
-  return isLight ? <DayMotes count={count} /> : <NightStars count={count} />;
+  return isLight ? <DayBubbles count={count} /> : <NightStars count={count} />;
 }
 
 /** Gentle camera parallax that eases toward the pointer (footer only). */
@@ -390,17 +404,7 @@ export default function AuroraFlow({
     >
       <GradientField isLight={isLight} intensity={intensity} />
       {bokeh > 0 && <Bokeh isLight={isLight} count={bokeh} />}
-      {shapes > 0 && (
-        <>
-          {isLight && (
-            <>
-              <ambientLight intensity={0.75} />
-              <directionalLight position={[3, 4, 5]} intensity={1.0} />
-            </>
-          )}
-          <FallingBits isLight={isLight} count={shapes} />
-        </>
-      )}
+      {shapes > 0 && <FallingBits isLight={isLight} count={shapes} />}
       {parallax && <Rig />}
     </Canvas>
   );
