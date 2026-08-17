@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Billboard, Instance, Instances, Stars } from "@react-three/drei";
+import { Billboard, Instance, Instances } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -199,6 +199,228 @@ function makeGlowTexture(): THREE.CanvasTexture {
   const tex = new THREE.CanvasTexture(c);
   tex.needsUpdate = true;
   return tex;
+}
+
+/**
+ * A spiral galaxy, drawn once to a canvas and used as a billboard sprite.
+ *
+ * Two logarithmic arms of scattered dots around a bright core, with the dot
+ * size and alpha falling off outward. Far cheaper than geometry — these sit
+ * hundreds of units away where only the silhouette reads — and it gives the
+ * background something to look at besides evenly-scattered points.
+ */
+function makeGalaxyTexture(seed: number): THREE.CanvasTexture {
+  const size = 256;
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext("2d")!;
+  const mid = size / 2;
+
+  // core
+  const core = ctx.createRadialGradient(mid, mid, 0, mid, mid, size * 0.16);
+  core.addColorStop(0, "rgba(255,248,230,0.95)");
+  core.addColorStop(0.5, "rgba(255,226,180,0.35)");
+  core.addColorStop(1, "rgba(255,210,160,0)");
+  ctx.fillStyle = core;
+  ctx.fillRect(0, 0, size, size);
+
+  // two arms, unwinding logarithmically
+  for (let arm = 0; arm < 2; arm++) {
+    const offset = arm * Math.PI;
+    for (let i = 0; i < 420; i++) {
+      const t = i / 420;
+      const angle = offset + t * 4.2 + seed;
+      const radius = Math.pow(t, 0.62) * mid * 0.94;
+
+      // scatter perpendicular to the arm so it reads as stars, not a line
+      const jx = (h(i * 3 + seed) - 0.5) * radius * 0.3;
+      const jy = (h(i * 3 + seed + 1) - 0.5) * radius * 0.3;
+
+      const x = mid + Math.cos(angle) * radius + jx;
+      const y = mid + Math.sin(angle) * radius * 0.42 + jy * 0.42;
+
+      const a = (1 - t) * 0.5;
+      const r = 0.6 + h(i * 3 + seed + 2) * 1.5;
+      ctx.fillStyle =
+        t < 0.35
+          ? `rgba(255,238,205,${a})`
+          : `rgba(190,214,255,${a * 0.85})`;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/**
+ * Star colours, roughly by stellar class — hot blue-white through cool amber.
+ * A field of pure white points looks synthetic; real ones do not agree on
+ * colour, and that variation is most of what makes a sky look deep.
+ */
+const STAR_COLOURS = [
+  [0.68, 0.79, 1.0],
+  [0.83, 0.89, 1.0],
+  [1.0, 1.0, 1.0],
+  [1.0, 0.97, 0.88],
+  [1.0, 0.88, 0.7],
+  [1.0, 0.76, 0.55],
+];
+
+/**
+ * Star positions clustered into a galactic band rather than scattered evenly.
+ *
+ * Two thirds are pulled toward a tilted plane with a gaussian falloff either
+ * side of it, which is what produces the dense spine and thinning edges a real
+ * sky has. The remainder stay as a uniform halo so the band has something to
+ * sit against.
+ */
+function makeStarGeometry(count: number, salt: number): THREE.BufferGeometry {
+  const pos = new Float32Array(count * 3);
+  const col = new Float32Array(count * 3);
+
+  for (let i = 0; i < count; i++) {
+    const s = i * 4 + salt;
+    const inBand = h(s) < 0.66;
+
+    const theta = h(s + 1) * Math.PI * 2;
+    const radius = 60 + h(s + 2) * 120;
+
+    // Sum of two uniforms approximates a gaussian — dense centre, thin tails.
+    const spread = inBand
+      ? (h(s + 3) + h(s + 4) - 1) * 26
+      : (h(s + 3) - 0.5) * 180;
+
+    // Band tilted ~22 degrees so it crosses the view diagonally.
+    const tilt = 0.38;
+    const x = Math.cos(theta) * radius;
+    const yFlat = spread;
+    const z = Math.sin(theta) * radius;
+
+    pos[i * 3] = x;
+    pos[i * 3 + 1] = yFlat * Math.cos(tilt) - z * Math.sin(tilt) * 0.25;
+    pos[i * 3 + 2] = z;
+
+    // Band stars skew warmer; halo stars skew blue-white.
+    const pick = Math.floor(
+      h(s + 5) * STAR_COLOURS.length * (inBand ? 1 : 0.6),
+    );
+    const rgb = STAR_COLOURS[Math.min(STAR_COLOURS.length - 1, pick)]!;
+    const dim = 0.55 + h(s + 6) * 0.45;
+    col[i * 3] = rgb[0]! * dim;
+    col[i * 3 + 1] = rgb[1]! * dim;
+    col[i * 3 + 2] = rgb[2]! * dim;
+  }
+
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  return g;
+}
+
+/**
+ * The sky. Two point clouds rather than one: `PointsMaterial` has a single
+ * size for every vertex, so a second, sparser layer at a larger size is how
+ * bright foreground stars are separated from the faint field.
+ */
+function StarField({ glow, reduced }: { glow: THREE.Texture; reduced: boolean }) {
+  const faint = useMemo(() => makeStarGeometry(reduced ? 900 : 2400, 17), [reduced]);
+  const bright = useMemo(() => makeStarGeometry(reduced ? 90 : 260, 913), [reduced]);
+  const group = useRef<THREE.Group>(null);
+
+  // Rides with the camera so the sky never runs out down the corridor.
+  useFrame((state) => {
+    const g = group.current;
+    if (!g) return;
+    const z = state.camera.position.z;
+    g.position.set(pathX(z), pathY(z), z);
+  });
+
+  return (
+    <group ref={group}>
+      <points geometry={faint}>
+        <pointsMaterial
+          map={glow}
+          size={0.75}
+          sizeAttenuation
+          vertexColors
+          transparent
+          opacity={0.85}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+      <points geometry={bright}>
+        <pointsMaterial
+          map={glow}
+          size={2.1}
+          sizeAttenuation
+          vertexColors
+          transparent
+          opacity={0.95}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+    </group>
+  );
+}
+
+/** Distant spiral galaxies, fixed in the sky, each turning very slowly. */
+function DistantGalaxies() {
+  const textures = useMemo(
+    () => [makeGalaxyTexture(0.7), makeGalaxyTexture(2.9), makeGalaxyTexture(5.1)],
+    [],
+  );
+
+  const placements = useMemo(
+    () => [
+      { at: [-150, 62, -0.18 * TOTAL] as const, size: 92, tilt: -0.5, spin: 0.006 },
+      { at: [165, -48, -0.52 * TOTAL] as const, size: 74, tilt: 0.8, spin: -0.004 },
+      { at: [-120, -70, -0.85 * TOTAL] as const, size: 58, tilt: 0.25, spin: 0.005 },
+    ],
+    [],
+  );
+
+  return (
+    <>
+      {placements.map((p, i) => (
+        <Galaxy key={i} texture={textures[i]!} {...p} />
+      ))}
+    </>
+  );
+}
+
+function Galaxy({
+  texture, at, size, tilt, spin,
+}: {
+  texture: THREE.Texture;
+  at: readonly [number, number, number];
+  size: number;
+  tilt: number;
+  spin: number;
+}) {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame((_, dt) => {
+    if (ref.current) ref.current.rotation.z += dt * spin;
+  });
+
+  return (
+    <mesh ref={ref} position={[at[0], at[1], at[2]]} rotation={[tilt, 0, 0]}>
+      <planeGeometry args={[size, size]} />
+      <meshBasicMaterial
+        map={texture}
+        transparent
+        opacity={0.55}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </mesh>
+  );
 }
 
 /**
@@ -456,13 +678,34 @@ function Dust({ count = 320, glow }: { count?: number; glow: THREE.Texture }) {
 
   const geometry = useMemo(() => {
     const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+
+    // Clumped, not evenly scattered. Each speck belongs to one of a handful of
+    // clouds and sits near its centre, so the corridor has thick and thin
+    // patches to fly through instead of uniform static.
+    const CLOUDS = 7;
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = (h(i * 5 + 1) - 0.5) * 70;
-      pos[i * 3 + 1] = (h(i * 5 + 2) - 0.5) * 46;
-      pos[i * 3 + 2] = -h(i * 5 + 3) * 150;
+      const cloud = i % CLOUDS;
+      const cx = (h(cloud * 9 + 1) - 0.5) * 62;
+      const cy = (h(cloud * 9 + 2) - 0.5) * 40;
+      const cz = -h(cloud * 9 + 3) * 150;
+
+      const s = i * 5;
+      // Two summed uniforms cluster toward the cloud centre.
+      pos[i * 3] = cx + (h(s + 1) + h(s + 2) - 1) * 20;
+      pos[i * 3 + 1] = cy + (h(s + 3) + h(s + 4) - 1) * 14;
+      pos[i * 3 + 2] = cz + (h(s + 5) + h(s + 6) - 1) * 42;
+
+      // Cool blue in the thick of a cloud, warmer at the edges.
+      const warm = h(s + 7);
+      col[i * 3] = 0.55 + warm * 0.4;
+      col[i * 3 + 1] = 0.66 + warm * 0.2;
+      col[i * 3 + 2] = 0.9 - warm * 0.15;
     }
+
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    g.setAttribute("color", new THREE.BufferAttribute(col, 3));
     return g;
   }, [count]);
 
@@ -478,9 +721,9 @@ function Dust({ count = 320, glow }: { count?: number; glow: THREE.Texture }) {
     <points ref={ref} geometry={geometry}>
       <pointsMaterial
         map={glow}
-        size={0.5}
+        size={0.55}
         sizeAttenuation
-        color="#9fb4d8"
+        vertexColors
         transparent
         opacity={0.5}
         depthWrite={false}
@@ -795,7 +1038,9 @@ function Voyage({ reduced }: { reduced: boolean }) {
       <ambientLight intensity={0.32} />
       <directionalLight position={[6, 8, 4]} intensity={1} />
 
-      <Stars radius={140} depth={90} count={reduced ? 900 : 3000} factor={4} fade speed={0.35} />
+      {/* Replaces drei's <Stars>, which scatters uniform white points. */}
+      <StarField glow={glow} reduced={reduced} />
+      <DistantGalaxies />
 
       <Nebula color="#7c3aed" offset={[-24, 9]} z={-SPACING * 2} zone={[0.06, 0.18, 0.32, 0.44]} size={52} glow={glow} />
       <Nebula color="#0891b2" offset={[26, -11]} z={-SPACING * 5} zone={[0.4, 0.52, 0.66, 0.78]} size={56} glow={glow} />
