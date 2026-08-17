@@ -9,7 +9,9 @@ export const siteConfig = {
   title: "Jayraj — Full Stack Software Engineer",
   description:
     "Full-stack software engineer building fast, scalable, production-ready web and realtime systems — clean UIs, solid APIs, cloud-ready backends, and interactive 3D.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  // Matches the port the `dev` and `start` scripts bind to, so sitemap and
+  // canonical URLs point at a server that actually exists locally.
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3010",
   ogImage: "/images/jairajpic.jpeg",
   locale: "en_US",
   jobTitle: "Full Stack Software Engineer",
