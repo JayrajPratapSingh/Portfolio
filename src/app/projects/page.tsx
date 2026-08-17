@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Search,
   ArrowRight,
+  BookOpen,
 } from "lucide-react";
 import { FaGithub, FaNodeJs, FaReact, FaDocker } from "react-icons/fa";
 import {
@@ -26,6 +27,9 @@ import {
 import {
   projects,
   projectCategories,
+  hasCaseStudy,
+  isRealLink,
+  mergeProjects,
   type Project,
   type ProjectCategory,
 } from "@/data/projects";
@@ -72,7 +76,10 @@ export default function ProjectsPage() {
   const reduced = useReducedMotion();
   const [filter, setFilter] = useState<Filter>("All");
   const [query, setQuery] = useState("");
-  const projectsData = usePublicContent<Project[]>("projects", projects);
+  const stored = usePublicContent<Project[]>("projects", projects);
+  // Layer stored entries over the static defaults so a DB snapshot saved before
+  // `caseStudy` existed still resolves its write-up.
+  const projectsData = useMemo(() => mergeProjects(stored), [stored]);
 
   const featured = useMemo(() => projectsData.filter((p) => p.featured), [projectsData]);
 
@@ -244,7 +251,18 @@ function FeaturedCard({
         </span>
       </div>
 
-      <h2 className="mt-7 text-3xl font-black md:text-4xl">{project.title}</h2>
+      <h2 className="mt-7 text-3xl font-black md:text-4xl">
+        {hasCaseStudy(project) ? (
+          <Link
+            href={`/projects/${project.slug}`}
+            className="transition-colors hover:text-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] dark:hover:text-cyan-300"
+          >
+            {project.title}
+          </Link>
+        ) : (
+          project.title
+        )}
+      </h2>
       <p className="mt-4 leading-8 text-foreground/60">{project.description}</p>
 
       <ul className="mt-6 space-y-2">
@@ -268,25 +286,44 @@ function FeaturedCard({
         ))}
       </div>
 
-      <div className="mt-8 flex items-center gap-3">
-        <Link
-          href={project.live}
-          target="_blank"
-          className="btn-3d group/btn inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 px-5 py-3 text-sm font-semibold text-white dark:from-cyan-400 dark:to-cyan-300 dark:text-black"
-        >
-          <Globe size={16} /> Live Demo
-          <ExternalLink size={14} className="transition-transform group-hover/btn:translate-x-0.5" />
-        </Link>
-        <Link
-          href={project.github}
-          target="_blank"
-          className={cn(
-            "inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm transition-colors hover:text-foreground",
-            glass,
-          )}
-        >
-          <FaGithub size={16} /> GitHub
-        </Link>
+      {/* Actions — a link is rendered only when it actually points somewhere. */}
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        {hasCaseStudy(project) && (
+          <Link
+            href={`/projects/${project.slug}`}
+            className="btn-3d group/btn inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 px-5 py-3 text-sm font-semibold text-white dark:from-cyan-400 dark:to-cyan-300 dark:text-black"
+          >
+            <BookOpen size={16} /> Read case study
+            <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-0.5" />
+          </Link>
+        )}
+        {isRealLink(project.live) && (
+          <Link
+            href={project.live}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm transition-colors hover:text-foreground",
+              glass,
+            )}
+          >
+            <Globe size={16} /> Live Demo
+            <ExternalLink size={14} />
+          </Link>
+        )}
+        {isRealLink(project.github) && (
+          <Link
+            href={project.github}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm transition-colors hover:text-foreground",
+              glass,
+            )}
+          >
+            <FaGithub size={16} /> GitHub
+          </Link>
+        )}
       </div>
     </motion.article>
   );
@@ -331,7 +368,18 @@ function GridCard({ project, reduced }: { project: Project; reduced: boolean }) 
           <span className="text-sm text-foreground/45">{project.year}</span>
         </div>
 
-        <h3 className="mt-4 text-xl font-black">{project.title}</h3>
+        <h3 className="mt-4 text-xl font-black">
+          {hasCaseStudy(project) ? (
+            <Link
+              href={`/projects/${project.slug}`}
+              className="transition-colors hover:text-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] dark:hover:text-cyan-300"
+            >
+              {project.title}
+            </Link>
+          ) : (
+            project.title
+          )}
+        </h3>
         <p className="mt-3 text-sm leading-7 text-foreground/60">{project.description}</p>
 
         <div className="mt-5 flex flex-wrap gap-1.5">
@@ -345,22 +393,40 @@ function GridCard({ project, reduced }: { project: Project; reduced: boolean }) 
           ))}
         </div>
 
-        <div className="mt-6 flex items-center gap-5 text-sm">
-          <Link
-            href={project.github}
-            target="_blank"
-            className="flex items-center gap-2 text-foreground/70 transition-colors hover:text-indigo-500 dark:hover:text-cyan-300"
-          >
-            <FaGithub size={16} /> Code
-          </Link>
-          <Link
-            href={project.live}
-            target="_blank"
-            className="flex items-center gap-2 text-foreground/70 transition-colors hover:text-indigo-500 dark:hover:text-cyan-300"
-          >
-            <ExternalLink size={16} /> Live
-          </Link>
-        </div>
+        {(hasCaseStudy(project) ||
+          isRealLink(project.github) ||
+          isRealLink(project.live)) && (
+          <div className="mt-6 flex flex-wrap items-center gap-5 text-sm">
+            {hasCaseStudy(project) && (
+              <Link
+                href={`/projects/${project.slug}`}
+                className="flex items-center gap-2 font-semibold text-indigo-500 transition-colors hover:text-indigo-600 dark:text-cyan-300 dark:hover:text-cyan-200"
+              >
+                <BookOpen size={16} /> Case study
+              </Link>
+            )}
+            {isRealLink(project.github) && (
+              <Link
+                href={project.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-foreground/70 transition-colors hover:text-indigo-500 dark:hover:text-cyan-300"
+              >
+                <FaGithub size={16} /> Code
+              </Link>
+            )}
+            {isRealLink(project.live) && (
+              <Link
+                href={project.live}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-foreground/70 transition-colors hover:text-indigo-500 dark:hover:text-cyan-300"
+              >
+                <ExternalLink size={16} /> Live
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </motion.article>
   );

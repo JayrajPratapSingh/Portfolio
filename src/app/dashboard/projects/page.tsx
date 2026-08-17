@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   projectCategories,
+  mergeProjects,
   type Project,
   type ProjectCategory,
   type ProjectStatus,
@@ -18,6 +19,7 @@ import {
   AddButton,
 } from "@/components/dashboard/FormKit";
 import ImageUpload from "@/components/dashboard/ImageUpload";
+import CaseStudyEditor from "@/components/dashboard/CaseStudyEditor";
 
 const STATUSES: ProjectStatus[] = ["Production", "Live", "In Progress"];
 
@@ -45,7 +47,10 @@ export default function ProjectsDashboard() {
   const [rows, setRows] = useState<Project[]>([]);
 
   useEffect(() => {
-    if (data) setRows(data);
+    // Merge over the static defaults so write-ups that only exist in code (the
+    // stored snapshot predates `caseStudy`) show up here instead of looking
+    // empty — the first save then persists them into the DB.
+    if (data) setRows(mergeProjects(data));
   }, [data]);
 
   const update = (i: number, patch: Partial<Project>) =>
@@ -86,6 +91,20 @@ export default function ProjectsDashboard() {
                   </Field>
                   <Field label="Year">
                     <input className="input" value={p.year} onChange={(e) => update(i, { year: e.target.value })} />
+                  </Field>
+                </div>
+
+                <div className="mt-4">
+                  <Field
+                    label="Slug"
+                    hint={`Case-study URL: /projects/${p.slug || "auto-generated-from-title"}. Changing it breaks any existing link.`}
+                  >
+                    <input
+                      className="input"
+                      value={p.slug}
+                      placeholder="auto-generated from the title"
+                      onChange={(e) => update(i, { slug: e.target.value })}
+                    />
                   </Field>
                 </div>
 
@@ -145,6 +164,11 @@ export default function ProjectsDashboard() {
                   />
                   Featured (shown in the highlighted grid)
                 </label>
+
+                <CaseStudyEditor
+                  value={p.caseStudy}
+                  onChange={(caseStudy) => update(i, { caseStudy })}
+                />
               </RepeaterItem>
             ))}
           </div>
