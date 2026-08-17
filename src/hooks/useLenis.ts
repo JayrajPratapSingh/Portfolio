@@ -2,11 +2,26 @@
 
 import { useEffect } from "react";
 import Lenis from "lenis";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/all";
 import { useReducedMotion } from "./useReducedMotion";
 
+gsap.registerPlugin(ScrollTrigger);
+
 /**
- * Site-wide smooth scrolling via Lenis. Disabled under reduced-motion so the
- * accessibility preference always wins. Drives Lenis from a single rAF loop.
+ * Site-wide smooth scrolling via Lenis, driven from GSAP's ticker.
+ *
+ * Lenis and ScrollTrigger have to share a clock. Lenis smooths the scroll
+ * position on its own loop, while ScrollTrigger updates from native scroll
+ * events — so a pinned section (`Future`) was positioned a frame behind where
+ * the page had actually scrolled to, which showed as a black band opening up
+ * beneath it, worst when scrolling back up.
+ *
+ * Running Lenis off `gsap.ticker` and pushing every Lenis scroll into
+ * `ScrollTrigger.update` puts both on the same frame. It also removes a second
+ * rAF loop from the page.
+ *
+ * Disabled under reduced-motion so the accessibility preference always wins.
  */
 export function useLenis() {
   const reduced = useReducedMotion();
@@ -21,15 +36,24 @@ export function useLenis() {
       touchMultiplier: 1.6,
     });
 
-    let raf = 0;
-    const loop = (time: number) => {
-      lenis.raf(time);
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
+    const onScroll = () => ScrollTrigger.update();
+    lenis.on("scroll", onScroll);
+
+    // gsap.ticker reports seconds; Lenis expects milliseconds.
+    const tick = (time: number) => lenis.raf(time * 1000);
+    gsap.ticker.add(tick);
+
+    // Without this, a stalled frame makes gsap skip time to "catch up", which
+    // desynchronises the pinned sections from the scroll position.
+    gsap.ticker.lagSmoothing(0);
+
+    // Positions were measured before Lenis took over the scroll.
+    ScrollTrigger.refresh();
 
     return () => {
-      cancelAnimationFrame(raf);
+      lenis.off("scroll", onScroll);
+      gsap.ticker.remove(tick);
+      gsap.ticker.lagSmoothing(500, 33); // gsap's default
       lenis.destroy();
     };
   }, [reduced]);

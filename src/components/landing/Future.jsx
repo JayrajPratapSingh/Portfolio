@@ -32,17 +32,38 @@ export default function Future() {
       if (!videoRef.current || reduced) return;
       gsap.fromTo(
         videoRef.current,
-        { yPercent: 10, scale: 1.2 },
+        // Travel is deliberately small (was 10 → -12).
+        //
+        // A parallax layer has to be larger than its window by more than it
+        // travels, and with `object-cover` that extra size *is* crop. The
+        // original ±12 needed 22.5% of overscan and beheaded the figure.
+        //
+        // ±4 is the chosen setting: this sits behind the "THE FUTURE" type, and
+        // a background that drifts hard competes with the foreground rather than
+        // supporting it. Paired with 112%/-6% below — the constraint is roughly
+        // `overscan >= travel x 1.5`, so these two must always move together.
+        { yPercent: 4, scale: 1.12 },
         {
-          yPercent: -12,
+          yPercent: -4,
           scale: 1,
           ease: "none",
           scrollTrigger: {
             trigger: containerRef.current,
-            start: "top top",
-            end: "+=150%",
+            // Runs while the section crosses the viewport, with no pin.
+            //
+            // This used to pin for "+=150%", which made ScrollTrigger wrap the
+            // section in a spacer padded by 1080px. Once the element left the
+            // pin, that padding was exposed below it and grew as you kept
+            // scrolling — the black band that widened towards the footer.
+            //
+            // The animation is a parallax on the artwork; it never needed the
+            // section to be held in place. Scrubbing it across the section's own
+            // pass through the viewport gives the same effect, removes the
+            // spacer entirely, and drops 1080px of scroll in which nothing new
+            // happened.
+            start: "top bottom",
+            end: "bottom top",
             scrub: 1,
-            pin: true,
           },
         },
       );
@@ -102,14 +123,32 @@ export default function Future() {
 
   /* ---------------- NIGHT — original robot video ---------------- */
   return (
-    <section ref={containerRef} className="relative h-screen overflow-hidden bg-black">
+    <section
+      ref={containerRef}
+      data-pin-bg
+      style={{ "--pin-bg": "#000" }}
+      className="relative h-screen overflow-hidden bg-black"
+    >
+      {/*
+        Deliberately taller than the section, with the overflow split evenly
+        above and below.
+
+        The parallax below moves this up to `yPercent: -12` while scaling it
+        back to 1. At exactly 100% height that leaves 12% of the section
+        uncovered along the bottom — flat black, widening as the scrub advanced.
+        A parallax layer has to exceed its window by more than it travels — and
+        with `object-cover`, that excess is crop. Paired with the ±4 travel in
+        the tween above: at 720px tall the bottom edge clears the frame by ~11px
+        at the extreme, losing 6% off each end rather than the 22.5% the old ±12
+        travel demanded. Change one of these and you must change both.
+      */}
       <video
         ref={videoRef}
         autoPlay
         muted
         loop
         playsInline
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-x-0 top-[-6%] h-[112%] w-full object-cover"
       >
         <source src={VIDEO} />
       </video>
