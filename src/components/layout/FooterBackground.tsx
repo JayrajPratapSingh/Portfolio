@@ -1,12 +1,14 @@
 "use client";
 
-import AuroraFlow from "./AuroraFlow";
+import AuroraGradient from "./AuroraGradient";
 
 /**
- * Footer backdrop — the same professional 3D mesh-gradient as the navbar, with a
- * layer of soft depth bokeh and gentle pointer parallax for a richer, roomier feel.
- * Theme-aware; loaded client-side only (this file is dynamically imported).
+ * Footer backdrop — the same mesh-gradient as the navbar, at a roomier scale.
+ *
+ * Previously an `AuroraFlow` R3F canvas. The footer is in the global shell, so
+ * that canvas ran on every route (and, unlike the navbar, it was not gated
+ * behind reduced motion). The CSS version costs nothing on the main thread.
  */
 export default function FooterBackground({ isLight }: { isLight: boolean }) {
-  return <AuroraFlow isLight={isLight} bokeh={38} parallax intensity={0.95} />;
+  return <AuroraGradient isLight={isLight} intensity={0.95} scale={1.25} blur={64} />;
 }

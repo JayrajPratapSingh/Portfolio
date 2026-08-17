@@ -53,7 +53,13 @@ export default function Preloader() {
     if (done) unlock();
   }, [done]);
 
-  const visible = LINES.filter((l) => progress >= l.at);
+  // Every line keeps its slot from the first frame and only fades in, so the
+  // card never changes height. Appending lines instead re-centred the grid on
+  // each step, which Lighthouse counted as a layout shift on every route.
+  const lastVisible = LINES.reduce(
+    (acc, l, idx) => (progress >= l.at ? idx : acc),
+    -1,
+  );
   const bg = "radial-gradient(120% 120% at 50% 20%, #0b1020 0%, #060913 55%, #030509 100%)";
   const reveal = { duration: 0.8, ease: [0.76, 0, 0.24, 1] as const };
 
@@ -96,14 +102,16 @@ export default function Preloader() {
 
             {/* body */}
             <div className="space-y-1.5 px-5 py-5 font-mono text-[13px] leading-relaxed">
-              {visible.map((l, i) => {
-                const last = i === visible.length - 1;
+              {LINES.map((l, i) => {
+                const shown = i <= lastVisible;
+                const last = i === lastVisible;
                 return (
                   <motion.div
                     key={l.text}
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    initial={false}
+                    animate={shown ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 }}
                     transition={{ duration: 0.2 }}
+                    aria-hidden={!shown}
                     className="flex items-start gap-2"
                   >
                     {l.kind === "cmd" ? (

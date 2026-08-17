@@ -1,28 +1,30 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/cn";
-
-const AuroraFlow = dynamic(() => import("./AuroraFlow"), { ssr: false });
+import AuroraGradient from "./AuroraGradient";
 
 /**
- * Navbar backdrop — a calm, professional 3D mesh-gradient (AuroraFlow) clipped to
- * the pill, over a static gradient base that also serves as the reduced-motion
- * fallback. Theme-aware (indigo/sky/violet by day, cyan/blue/violet at night).
+ * Navbar backdrop — a calm, professional mesh-gradient clipped to the pill,
+ * over a static gradient base. Theme-aware (indigo/sky/violet by day,
+ * cyan/blue/violet at night).
+ *
+ * This used to mount an `AuroraFlow` R3F canvas. Because the navbar renders on
+ * every route, that pulled three.js and a live WebGL loop onto pages with no 3D
+ * of their own. `AuroraGradient` reproduces the look in CSS at no main-thread
+ * cost, and needs no reduced-motion gate of its own — the global
+ * `prefers-reduced-motion` rule stops the drift while keeping the gradient.
  */
 export default function NavBackground() {
   const { resolvedTheme } = useTheme();
-  const reduced = useReducedMotion();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const isLight = mounted && resolvedTheme === "light";
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
-      {/* static gradient base (also the reduced-motion fallback) */}
+      {/* static gradient base (renders before the theme resolves) */}
       <div
         className={cn(
           "absolute inset-0 rounded-full",
@@ -32,10 +34,10 @@ export default function NavBackground() {
         )}
       />
 
-      {/* the 3D mesh-gradient */}
-      {mounted && !reduced && (
-        <div className="absolute inset-0 opacity-90">
-          <AuroraFlow isLight={isLight} intensity={0.7} shapes={10} />
+      {/* the mesh-gradient */}
+      {mounted && (
+        <div className="absolute inset-0 overflow-hidden rounded-full opacity-90">
+          <AuroraGradient isLight={isLight} intensity={0.7} scale={0.85} blur={22} />
         </div>
       )}
 

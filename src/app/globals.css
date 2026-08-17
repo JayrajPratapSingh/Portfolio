@@ -303,6 +303,145 @@ html.lenis body {
     transform: translateX(-50%);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  ROBOT FACE — the chat assistant's avatar. CSS keyframes so the      */
+/*  global prefers-reduced-motion rule above stops them automatically.  */
+/* ------------------------------------------------------------------ */
+.robot-eyes {
+  transform-origin: center 14.5px;
+  animation: robot-blink 5s ease-in-out infinite;
+}
+
+@keyframes robot-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.12);
+  }
+}
+
+.robot-antenna {
+  transform-origin: 16px 2.4px;
+  animation: robot-ping 2.6s ease-in-out infinite;
+}
+
+@keyframes robot-ping {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.25);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  GSAP pin spacers.                                                  */
+/*                                                                     */
+/*  ScrollTrigger wraps a pinned section in a bare <div> whose padding  */
+/*  holds the scroll distance. While the pin is settling — or on a fast */
+/*  reverse scroll — that padding can be on screen for a frame before   */
+/*  the fixed element is placed, which reads as a black band. Painting  */
+/*  the spacer the same colour as the section it holds makes any such   */
+/*  frame invisible instead of a flash.                                 */
+/* ------------------------------------------------------------------ */
+.pin-spacer:has(> [data-pin-bg]) {
+  background: var(--pin-bg, #000);
+}
+
+/* ------------------------------------------------------------------ */
+/*  AURORA GRADIENT — CSS mesh-gradient used by the navbar + footer.   */
+/*  Replaces the R3F canvas that used to load three.js on every route. */
+/*  Animates `transform` only, so it stays on the compositor. Each     */
+/*  loop returns to its starting position, which is also what the      */
+/*  global reduced-motion rule snaps to.                               */
+/* ------------------------------------------------------------------ */
+.aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  /* Set per-instance: the navbar pill is ~90px tall and needs a tighter blur
+     than the footer, or the colour washes out completely. */
+  filter: blur(var(--aurora-blur, 44px));
+  will-change: transform;
+  pointer-events: none;
+}
+
+.aurora-blob-1 {
+  top: -45%;
+  left: -12%;
+  animation: aurora-drift-1 26s ease-in-out infinite;
+}
+
+.aurora-blob-2 {
+  top: -40%;
+  right: -10%;
+  animation: aurora-drift-2 32s ease-in-out infinite;
+}
+
+.aurora-blob-3 {
+  bottom: -55%;
+  left: 32%;
+  animation: aurora-drift-3 38s ease-in-out infinite;
+}
+
+@keyframes aurora-drift-1 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(18%, 8%, 0) scale(1.12);
+  }
+}
+
+@keyframes aurora-drift-2 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-16%, 10%, 0) scale(1.08);
+  }
+}
+
+@keyframes aurora-drift-3 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(12%, -12%, 0) scale(1.15);
+  }
+}
+
+.aurora-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.07) 50%,
+    transparent 70%
+  );
+  background-size: 260% 100%;
+  animation: aurora-sheen-drift 22s linear infinite;
+}
+
+@keyframes aurora-sheen-drift {
+  0% {
+    background-position: 130% 0;
+  }
+  100% {
+    background-position: -130% 0;
+  }
+}
 .animate-marquee {
   animation: marquee 28s linear infinite;
 }
