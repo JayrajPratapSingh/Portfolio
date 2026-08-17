@@ -424,6 +424,183 @@ function Galaxy({
 }
 
 /**
+ * Trail sprite for a meteor: bright at the head, tapering to nothing behind.
+ *
+ * A tapered gradient rather than a plain stretched quad. The vertical falloff
+ * narrows toward the tail, so the streak comes to a point instead of ending on
+ * a blunt edge, and the alpha ramp is cubed so the brightness collapses close
+ * to the head the way a real trail does.
+ */
+function makeTrailTexture(): THREE.CanvasTexture {
+  const w = 256;
+  const hgt = 32;
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = hgt;
+  const ctx = c.getContext("2d")!;
+
+  const img = ctx.createImageData(w, hgt);
+  for (let x = 0; x < w; x++) {
+    // 0 at the tail, 1 at the head.
+    const t = x / (w - 1);
+    const along = Math.pow(t, 3);
+    // Half-width tapers from a point at the tail to full at the head.
+    const halfWidth = (0.12 + Math.pow(t, 0.7) * 0.88) * (hgt / 2);
+
+    for (let y = 0; y < hgt; y++) {
+      const dy = Math.abs(y - hgt / 2) / halfWidth;
+      const across = dy > 1 ? 0 : Math.pow(1 - dy, 2);
+      const a = along * across;
+      const i = (y * w + x) * 4;
+      // Slightly cyan in the trail, whitening toward the head.
+      img.data[i] = 190 + t * 65;
+      img.data[i + 1] = 232 + t * 23;
+      img.data[i + 2] = 255;
+      img.data[i + 3] = Math.round(a * 255);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+interface MeteorSpec {
+  /** Seconds between appearances. */
+  period: number;
+  /** Offset into the cycle, so they never arrive together. */
+  phase: number;
+  /** Seconds the streak is visible. */
+  life: number;
+  /** Length in world units at full stretch. */
+  length: number;
+  thickness: number;
+  /** Start and end, relative to the camera. */
+  from: [number, number, number];
+  to: [number, number, number];
+}
+
+/**
+ * Meteors crossing the sky.
+ *
+ * Driven by the clock rather than by scroll: a sky that only moves when the
+ * visitor moves feels like a diagram. Each has its own period and phase so they
+ * arrive irregularly — the point of a shooting star is that you catch it, which
+ * means most of the time there shouldn't be one.
+ *
+ * Positioned relative to the camera so they are always somewhere in view, and
+ * always well beyond the corridor so they never collide with a station.
+ */
+const METEORS: MeteorSpec[] = [
+  { period: 7.5,  phase: 0.0,  life: 0.85, length: 26, thickness: 0.9,  from: [-58, 40, -120], to: [34, -14, -96] },
+  { period: 11.0, phase: 3.1,  life: 1.05, length: 34, thickness: 1.15, from: [62, 34, -140],  to: [-30, -20, -104] },
+  { period: 9.0,  phase: 6.4,  life: 0.7,  length: 20, thickness: 0.75, from: [-44, -34, -110], to: [40, 26, -88] },
+  // Occasional fireball: rarer, longer, noticeably fatter.
+  { period: 23.0, phase: 13.0, life: 1.5,  length: 52, thickness: 2.0,  from: [70, 46, -160],  to: [-52, -26, -110] },
+];
+
+function Meteors({ trail, glow }: { trail: THREE.Texture; glow: THREE.Texture }) {
+  return (
+    <>
+      {METEORS.map((m, i) => (
+        <Meteor key={i} spec={m} trail={trail} glow={glow} />
+      ))}
+    </>
+  );
+}
+
+function Meteor({
+  spec, trail, glow,
+}: {
+  spec: MeteorSpec;
+  trail: THREE.Texture;
+  glow: THREE.Texture;
+}) {
+  const group = useRef<THREE.Group>(null);
+  const streak = useRef<THREE.Mesh>(null);
+  const head = useRef<THREE.Mesh>(null);
+
+  // Direction is fixed per meteor, so resolve it once.
+  const { dir, dist } = useMemo(() => {
+    const v = new THREE.Vector3(
+      spec.to[0] - spec.from[0],
+      spec.to[1] - spec.from[1],
+      spec.to[2] - spec.from[2],
+    );
+    return { dir: v.clone().normalize(), dist: v.length() };
+  }, [spec]);
+
+  useFrame((state) => {
+    const g = group.current;
+    if (!g) return;
+
+    const cycle = (state.clock.elapsedTime + spec.phase) % spec.period;
+    const active = cycle < spec.life;
+    g.visible = active;
+    if (!active) return;
+
+    const u = cycle / spec.life;
+
+    // Position along the path, relative to the camera.
+    const cam = state.camera.position;
+    g.position.set(
+      cam.x + spec.from[0] + dir.x * dist * u,
+      cam.y + spec.from[1] + dir.y * dist * u,
+      cam.z + spec.from[2] + dir.z * dist * u,
+    );
+
+    // Point the streak along travel; the quad's +x is its head.
+    g.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir);
+
+    // In fast, out slow — a meteor flares then burns away.
+    const fade = u < 0.18 ? u / 0.18 : Math.pow(1 - (u - 0.18) / 0.82, 1.6);
+
+    if (streak.current) {
+      // The trail stretches as it accelerates in, then shortens as it dies.
+      const stretch = Math.min(1, u * 4) * (0.45 + fade * 0.55);
+      streak.current.scale.set(stretch, 1, 1);
+      (streak.current.material as THREE.MeshBasicMaterial).opacity = fade * 0.95;
+    }
+    if (head.current) {
+      (head.current.material as THREE.MeshBasicMaterial).opacity = fade;
+      const s = 0.75 + fade * 0.6;
+      head.current.scale.setScalar(s);
+    }
+  });
+
+  return (
+    <group ref={group} visible={false}>
+      {/* trail — anchored so its head sits at the group origin */}
+      <mesh ref={streak} position={[-spec.length / 2, 0, 0]}>
+        <planeGeometry args={[spec.length, spec.thickness]} />
+        <meshBasicMaterial
+          map={trail}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      {/* white-hot head */}
+      <mesh ref={head}>
+        <planeGeometry args={[spec.thickness * 3.4, spec.thickness * 3.4]} />
+        <meshBasicMaterial
+          map={glow}
+          color="#ffffff"
+          transparent
+          opacity={0}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+/**
  * An irregular rock.
  *
  * A plain icosahedron — even at detail 1 — is just a faceted sphere, which is
@@ -1032,6 +1209,8 @@ function Nebula({
 function Voyage({ reduced }: { reduced: boolean }) {
   // One soft sprite for every glow plane in the scene — see makeGlowTexture.
   const glow = useMemo(() => makeGlowTexture(), []);
+  // Tapered streak, shared by every meteor.
+  const trail = useMemo(() => makeTrailTexture(), []);
 
   return (
     <>
@@ -1041,6 +1220,11 @@ function Voyage({ reduced }: { reduced: boolean }) {
       {/* Replaces drei's <Stars>, which scatters uniform white points. */}
       <StarField glow={glow} reduced={reduced} />
       <DistantGalaxies />
+
+      {/* Clock-driven, so the sky has life even when the visitor is still.
+          Skipped entirely under reduced motion — a streak flashing across the
+          view is exactly the kind of thing that preference asks us to drop. */}
+      {!reduced && <Meteors trail={trail} glow={glow} />}
 
       <Nebula color="#7c3aed" offset={[-24, 9]} z={-SPACING * 2} zone={[0.06, 0.18, 0.32, 0.44]} size={52} glow={glow} />
       <Nebula color="#0891b2" offset={[26, -11]} z={-SPACING * 5} zone={[0.4, 0.52, 0.66, 0.78]} size={56} glow={glow} />
@@ -1236,12 +1420,21 @@ export default function SpaceVoyage() {
         <Telemetry active={active} />
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-6 pt-20 text-center md:px-16">
-          <span className="text-xs uppercase tracking-[0.35em] text-cyan-300">
+          {/*
+            The big "Keep scrolling" headline used to sit here. It collided with
+            the station names and the 3D as the camera moved — three competing
+            blocks of white text in one frame. The eyebrow is enough to label the
+            section, and the station captions carry the actual content.
+
+            The heading itself stays for screen readers and the document
+            outline; only its visual weight is gone.
+          */}
+          <h2 className="text-xs uppercase tracking-[0.35em] text-cyan-300">
             The tech universe
-          </span>
-          <h2 className="mx-auto mt-3 max-w-3xl text-3xl font-black leading-tight md:text-5xl">
-            Keep scrolling — the stack comes to you.
           </h2>
+          <span className="sr-only">
+            A scroll-driven tour of the stack: each technology arrives in turn.
+          </span>
         </div>
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-6 pb-20 md:px-16">
