@@ -24,6 +24,9 @@ const HeroCityScene = dynamic(() => import("./hero/HeroCityScene"), {
   ssr: false,
 });
 
+// Dark mode is a scroll-driven voyage rather than a static orbit diagram.
+const SpaceVoyage = dynamic(() => import("./space/SpaceVoyage"), { ssr: false });
+
 import ReactCore from "./ReactCore";
 import NodeJSCore from "./NodeJSCore";
 import DockerCore from "./DockerCore";
@@ -313,6 +316,10 @@ export default function DevSolarSection() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const isLight = mounted && resolvedTheme === "light";
+
+  // Night mode travels; the two modes no longer share a layout, so the voyage
+  // owns its own (much taller) section rather than being squeezed into this one.
+  if (mounted && !isLight) return <SpaceVoyage />;
 
   return (
     <section
