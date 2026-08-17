@@ -32,8 +32,9 @@
   --shadow-soft: 0 10px 30px -12px rgba(79, 70, 229, 0.25);
 
   /* pointer companion (light) */
-  --cursor-ring: rgba(79, 70, 229, 0.35);
-  --cursor-disc-bg: rgba(79, 70, 229, 0.9);
+  --cursor-ring: rgba(79, 70, 229, 0.4);
+  --cursor-disc-wash: rgba(99, 102, 241, 0.1);
+  --cursor-disc-bg: rgba(67, 56, 202, 0.94);
   --cursor-disc-text: #ffffff;
 }
 
@@ -63,8 +64,9 @@
   --shadow-soft: 0 0 40px rgba(34, 211, 238, 0.12);
 
   /* pointer companion (dark) */
-  --cursor-ring: rgba(103, 232, 249, 0.4);
-  --cursor-disc-bg: rgba(34, 211, 238, 0.92);
+  --cursor-ring: rgba(103, 232, 249, 0.45);
+  --cursor-disc-wash: rgba(34, 211, 238, 0.1);
+  --cursor-disc-bg: rgba(34, 211, 238, 0.95);
   --cursor-disc-text: #04010f;
 }
 
@@ -124,12 +126,19 @@ body {
   left: 0;
   display: grid;
   place-items: center;
-  width: 92px;
-  height: 92px;
+  /*
+    62px, not 92px, and mostly transparent.
+    At 92px with a 0.92-alpha fill this sat on top of whatever it was
+    describing — on a normal-sized button the disc covered the button. The
+    target has to stay readable through it, so the fill is a wash and only the
+    label itself is opaque.
+  */
+  width: 62px;
+  height: 62px;
   border-radius: 9999px;
   border: 1px solid var(--cursor-ring);
-  background: var(--cursor-disc-bg);
-  backdrop-filter: blur(3px) saturate(130%);
+  background: var(--cursor-disc-wash);
+  backdrop-filter: blur(2px) saturate(120%);
   opacity: 0;
   pointer-events: none;
   will-change: transform, opacity;
@@ -145,17 +154,31 @@ body {
   opacity: 0 !important;
 }
 
+/*
+  Only the label is solid, and only as wide as its own text — so the thing
+  hidden behind the cursor is a small pill rather than a 62px disc.
+*/
 .cursor-disc__text {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  line-height: 1;
+  max-width: 58px;
+  padding: 3px 7px;
+  border-radius: 9999px;
+  background: var(--cursor-disc-bg);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
   text-align: center;
+  text-wrap: balance;
   color: var(--cursor-disc-text);
   /* The disc is scaled by JS; counter-scaling is not possible from CSS, so the
      label is kept small enough to stay crisp at the one open size. */
   transform: translateZ(0);
   user-select: none;
+}
+
+/* Nothing to show for an unlabelled target — avoids an empty pill. */
+.cursor-disc__text:empty {
+  display: none;
 }
 /* No custom cursor on touch / coarse-pointer / reduced-motion. The component
    also bails in JS; this is the belt to that braces, and it covers the case
