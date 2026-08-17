@@ -14,6 +14,7 @@ import {
   LogOut,
   Mail,
   FileText,
+  MessageSquare,
 } from "lucide-react";
 
 const menuItems = [
@@ -23,6 +24,7 @@ const menuItems = [
   { title: "Projects", href: "/dashboard/projects", icon: FolderKanban },
   { title: "Resume", href: "/dashboard/resume", icon: FileText },
   { title: "Messages", href: "/dashboard/messages", icon: Mail },
+  { title: "Assistant chats", href: "/dashboard/chats", icon: MessageSquare },
   { title: "Social Links", href: "/dashboard/social", icon: Share2 },
   { title: "SEO", href: "/dashboard/seo", icon: Search },
   { title: "Settings", href: "/dashboard/settings", icon: Settings },
