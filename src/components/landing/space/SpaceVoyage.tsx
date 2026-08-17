@@ -612,21 +612,105 @@ function Meteor({
  * welded — no cracks.
  */
 function makeRockGeometry(seed: number): THREE.BufferGeometry {
-  const g = new THREE.IcosahedronGeometry(1, 2);
+  // Detail 3 (1,280 triangles) rather than 2. Craters need enough vertices to
+  // resolve a rim; at detail 2 they came out as vague dents. The geometry is
+  // shared across every instance, so the extra triangles are paid for once.
+  const g = new THREE.IcosahedronGeometry(1, 3);
   const pos = g.attributes.position;
   const v = new THREE.Vector3();
+  const n = new THREE.Vector3();
+
+  /**
+   * Impact craters, placed on the unit sphere from the seed.
+   *
+   * Each is a bowl with a raised rim — the profile is what makes a crater read
+   * as an impact rather than a dent. Without them the rocks were smooth lumps:
+   * believable in silhouette, obviously synthetic once one passes close.
+   */
+  const craters = Array.from({ length: 6 }, (_, k) => {
+    const s = seed * 31 + k * 7;
+    // Even-ish sphere placement, then jittered.
+    const phi = Math.acos(2 * h(s + 1) - 1);
+    const theta = h(s + 2) * Math.PI * 2;
+    return {
+      dir: new THREE.Vector3(
+        Math.sin(phi) * Math.cos(theta),
+        Math.sin(phi) * Math.sin(theta),
+        Math.cos(phi),
+      ),
+      radius: 0.28 + h(s + 3) * 0.42,
+      depth: 0.06 + h(s + 4) * 0.13,
+    };
+  });
+
+  // Non-uniform axes, so not every rock is a sphere with bumps.
+  //
+  // The three multipliers and offsets are deliberately far apart.
+  // `fract(sin(n * 12.9898) * 43758.5453)` returns similar values for similar
+  // inputs, so seeding these from `seed*13 + 1/2/3` produced near-identical
+  // axes — the first shape came out 1.03:1, effectively a sphere.
+  const ax = 0.72 + h(seed * 7.1 + 3) * 0.62;
+  const ay = 0.72 + h(seed * 19.3 + 41) * 0.62;
+  const az = 0.72 + h(seed * 43.7 + 97) * 0.62;
+
+  const colours = new Float32Array(pos.count * 3);
+  let lo = Infinity;
+  let hi = -Infinity;
+  const radii = new Float32Array(pos.count);
 
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
-    const lump =
-      Math.sin(v.x * 2.1 + seed) * 0.42 +
-      Math.sin(v.y * 3.7 + seed * 2.3) * 0.3 +
-      Math.sin(v.z * 5.3 + seed * 3.1) * 0.2 +
-      Math.sin((v.x + v.y + v.z) * 7.9 + seed) * 0.1;
-    v.multiplyScalar(1 + lump * 0.3);
-    pos.setXYZ(i, v.x, v.y, v.z);
+    n.copy(v).normalize();
+
+    // Three octaves: broad shape, medium ridges, fine grit.
+    const o1 =
+      Math.sin(n.x * 2.1 + seed) * 0.42 +
+      Math.sin(n.y * 3.7 + seed * 2.3) * 0.3 +
+      Math.sin(n.z * 5.3 + seed * 3.1) * 0.2;
+    const o2 =
+      Math.sin(n.x * 8.3 - seed * 1.7) * 0.14 +
+      Math.sin(n.y * 11.1 + seed * 0.9) * 0.11 +
+      Math.sin(n.z * 9.7 - seed * 2.1) * 0.1;
+    const o3 =
+      Math.sin((n.x + n.y) * 21.3 + seed) * 0.045 +
+      Math.sin((n.y - n.z) * 27.9 - seed) * 0.035;
+
+    let r = 1 + (o1 * 0.3 + o2 * 0.34 + o3 * 0.4);
+
+    // Carve craters: bowl inward, rim outward just past the edge.
+    for (const c of craters) {
+      const t = n.angleTo(c.dir) / c.radius;
+      if (t >= 1.25) continue;
+      if (t < 1) r -= (1 - t * t) * c.depth;
+      r += Math.exp(-Math.pow((t - 0.9) / 0.16, 2)) * c.depth * 0.42;
+    }
+
+    radii[i] = r;
+    if (r < lo) lo = r;
+    if (r > hi) hi = r;
+
+    v.copy(n).multiplyScalar(r);
+    pos.setXYZ(i, v.x * ax, v.y * ay, v.z * az);
   }
 
+  /**
+   * Bake shading into vertex colour by height.
+   *
+   * Crater floors and crevices get darker, ridges lighter. It is a cheap stand-in
+   * for ambient occlusion, and it is what stops a rock reading as one flat grey
+   * mass once the light is behind it.
+   */
+  const span = Math.max(1e-4, hi - lo);
+  for (let i = 0; i < pos.count; i++) {
+    const k = (radii[i]! - lo) / span; // 0 in the hollows, 1 on the peaks
+    const shade = 0.52 + k * 0.55;
+    // Faintly warmer on the lit ridges, cooler in the shadowed lows.
+    colours[i * 3] = Math.min(1, shade * (0.94 + k * 0.12));
+    colours[i * 3 + 1] = Math.min(1, shade * 0.97);
+    colours[i * 3 + 2] = Math.min(1, shade * (1.06 - k * 0.1));
+  }
+
+  g.setAttribute("color", new THREE.BufferAttribute(colours, 3));
   pos.needsUpdate = true;
   g.computeVertexNormals();
   return g;
@@ -973,10 +1057,17 @@ function Asteroids({ count = 24 }: { count?: number }) {
     [count],
   );
 
-  // Three distinct silhouettes, so neighbouring rocks are never the same shape
-  // rotated. Still only three draw calls for the entire corridor.
+  // Five distinct silhouettes, each with its own craters and axis proportions,
+  // so no two neighbours are the same rock rotated. Still five draw calls for
+  // the entire corridor however many instances there are.
   const shapes = useMemo(
-    () => [makeRockGeometry(1.7), makeRockGeometry(4.2), makeRockGeometry(9.1)],
+    () => [
+      makeRockGeometry(1.7),
+      makeRockGeometry(4.2),
+      makeRockGeometry(9.1),
+      makeRockGeometry(14.6),
+      makeRockGeometry(21.3),
+    ],
     [],
   );
 
@@ -987,10 +1078,14 @@ function Asteroids({ count = 24 }: { count?: number }) {
         if (!mine.length) return null;
         return (
           <Instances key={s} limit={mine.length} range={mine.length} geometry={geo}>
+            {/* vertexColors carries the baked height shading from
+                makeRockGeometry; flatShading keeps the facets reading as rock
+                rather than a smooth blob. */}
             <meshStandardMaterial
-              color="#7c8493"
-              roughness={0.94}
-              metalness={0.12}
+              color="#8d94a2"
+              vertexColors
+              roughness={0.95}
+              metalness={0.14}
               flatShading
             />
             {mine.map((a, i) => (
@@ -1133,16 +1228,26 @@ function Satellite({ at }: { at: [number, number] }) {
 }
 
 /** A comet streaking past with a stretched tail. */
-function Comet({ at }: { at: [number, number] }) {
+function Comet({
+  at, trail, glow,
+}: {
+  at: [number, number];
+  trail: THREE.Texture;
+  glow: THREE.Texture;
+}) {
   const g = useRef<THREE.Group>(null);
+  const coma = useRef<THREE.Mesh>(null);
+  const ion = useRef<THREE.Mesh>(null);
+  const dust = useRef<THREE.Mesh>(null);
 
-  useFrame(() => {
+  useFrame((state) => {
     const m = g.current;
     if (!m) return;
     const u = winU(spaceScroll.progress, at[0], at[1]);
     const on = u > 0.001 && u < 0.999;
     m.visible = on;
     if (!on) return;
+
     const z = cameraZ(spaceScroll.progress) - 44;
     m.position.set(
       pathX(z) + THREE.MathUtils.lerp(30, -32, u),
@@ -1150,18 +1255,77 @@ function Comet({ at }: { at: [number, number] }) {
       z,
     );
     m.rotation.z = Math.atan2(24, -62);
+
+    // Fade in and out at the edges of its window so it never pops.
+    const fade = Math.min(1, u / 0.12, (1 - u) / 0.12);
+
+    if (coma.current) {
+      (coma.current.material as THREE.MeshBasicMaterial).opacity = fade * 0.95;
+      // Breathe slightly — a coma is gas, not a solid.
+      const pulse = 1 + Math.sin(state.clock.elapsedTime * 1.7) * 0.05;
+      coma.current.scale.setScalar(pulse);
+    }
+    if (ion.current) {
+      (ion.current.material as THREE.MeshBasicMaterial).opacity = fade * 0.5;
+    }
+    if (dust.current) {
+      (dust.current.material as THREE.MeshBasicMaterial).opacity = fade * 0.26;
+    }
   });
 
   return (
     <group ref={g} visible={false}>
-      <mesh>
-        <sphereGeometry args={[0.55, 16, 16]} />
-        <meshBasicMaterial color="#a5f3fc" />
+      {/*
+        Was a hard sphere with a hard cone stuck to it — both solid geometry with
+        visible edges, which is why it read as two shapes rather than a comet.
+        Now the same sprite approach as the meteors: a soft coma and two tapered
+        trails.
+
+        Real comets show two: a straight ion tail and a broader dust tail
+        trailing at a slight angle behind it. That split is most of what makes
+        the silhouette recognisable.
+      */}
+
+      {/* ion tail — narrow, straight, brighter */}
+      <mesh ref={ion} position={[7.5, 0, 0]}>
+        <planeGeometry args={[15, 1.5]} />
+        <meshBasicMaterial
+          map={trail}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+        />
       </mesh>
-      <mesh position={[4.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <coneGeometry args={[0.5, 9, 12, 1, true]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.32} side={THREE.DoubleSide} depthWrite={false} />
+
+      {/* dust tail — wider, dimmer, swept a few degrees off */}
+      <mesh ref={dust} position={[6, -1.4, -0.4]} rotation={[0, 0, -0.16]}>
+        <planeGeometry args={[12, 3.6]} />
+        <meshBasicMaterial
+          map={trail}
+          color="#cfe6ff"
+          transparent
+          opacity={0}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+        />
       </mesh>
+
+      {/* coma — soft glow, no hard edge */}
+      <mesh ref={coma}>
+        <planeGeometry args={[4.6, 4.6]} />
+        <meshBasicMaterial
+          map={glow}
+          color="#d8fbff"
+          transparent
+          opacity={0}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
       <pointLight color="#67e8f9" intensity={10} distance={22} />
     </group>
   );
@@ -1245,7 +1409,7 @@ function Voyage({ reduced }: { reduced: boolean }) {
       ))}
 
       <Satellite at={[0.24, 0.42]} />
-      <Comet at={[0.56, 0.72]} />
+      <Comet at={[0.56, 0.72]} trail={trail} glow={glow} />
 
       <Rig />
     </>
