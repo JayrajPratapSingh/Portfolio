@@ -99,7 +99,17 @@ const STOPS: Stop[] = [
 ];
 
 const SPACING = 38;
-const TOTAL = STOPS.length * SPACING;
+/**
+ * A short run past the final station, so the journey eases out instead of
+ * stopping dead on top of it.
+ *
+ * Deliberately much shorter than a full segment. The corridor used to run
+ * `STOPS.length * SPACING`, a whole segment beyond the last station — which
+ * left the final caption on screen for 22% of the section's scroll while
+ * nothing new arrived, against 8-9% for every other stop.
+ */
+const OUTRO = 16;
+const TOTAL = (STOPS.length - 1) * SPACING + OUTRO;
 /**
  * How far back the journey begins.
  *
@@ -110,8 +120,44 @@ const TOTAL = STOPS.length * SPACING;
  */
 const START_Z = 58;
 
-const cameraZ = (p: number) => START_Z - p * (TOTAL + START_Z);
 const worldZ = (i: number) => -i * SPACING;
+
+/**
+ * How far along the corridor a given scroll progress puts you.
+ *
+ * Not linear. Stations sit at segment boundaries, so easing within each segment
+ * makes the ship decelerate as one comes up, hold while you read it, then
+ * accelerate through the empty stretch to the next. Linear travel gave every
+ * part of the journey the same weight, which made arriving at a station feel
+ * like nothing in particular.
+ *
+ * Blended back toward linear rather than used raw: full easeInOutQuad stalls
+ * hard enough at each boundary that scrolling feels like it has snagged.
+ */
+function corridorDistance(p: number): number {
+  const total = TOTAL + START_Z;
+
+  // Measured from the first station, not from the start of the run. START_Z
+  // (58) is not a multiple of SPACING (38), so easing on raw distance put the
+  // slow points at 38/76/114 while the stations sit at 58/96/134 — it
+  // decelerated in the gaps and accelerated through the arrivals.
+  const seg = (p * total - START_Z) / SPACING;
+  const i = Math.floor(seg);
+  const f = seg - i;
+
+  const eased = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+  const blended = f * 0.45 + eased * 0.55;
+
+  return Math.max(0, Math.min(total, START_Z + (i + blended) * SPACING));
+}
+
+/** Which station the camera is currently nearest, for the caption. */
+function activeStop(p: number): number {
+  const fromFirst = (corridorDistance(p) - START_Z) / SPACING;
+  return Math.max(0, Math.min(STOPS.length - 1, Math.round(fromFirst)));
+}
+
+const cameraZ = (p: number) => START_Z - corridorDistance(p);
 
 /** Deterministic pseudo-random from an index — pure, so React can re-run it. */
 function h(n: number): number {
@@ -398,6 +444,84 @@ function Streak({ ox, oy, off }: { ox: number; oy: number; off: number }) {
 }
 
 /**
+ * Fine dust drifting through the corridor.
+ *
+ * A single Points cloud rather than instanced meshes — a few hundred specks in
+ * one draw call, recycled around the camera so the field is never empty and
+ * never bigger than it needs to be. This is what stops the stretches between
+ * stations reading as flat black.
+ */
+function Dust({ count = 320, glow }: { count?: number; glow: THREE.Texture }) {
+  const ref = useRef<THREE.Points>(null);
+
+  const geometry = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (h(i * 5 + 1) - 0.5) * 70;
+      pos[i * 3 + 1] = (h(i * 5 + 2) - 0.5) * 46;
+      pos[i * 3 + 2] = -h(i * 5 + 3) * 150;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    return g;
+  }, [count]);
+
+  useFrame((state) => {
+    const p = ref.current;
+    if (!p) return;
+    // Rides with the camera: a 150-unit tunnel that follows it down the route.
+    const camZ = state.camera.position.z;
+    p.position.set(pathX(camZ), pathY(camZ), Math.floor(camZ / 150) * 150);
+  });
+
+  return (
+    <points ref={ref} geometry={geometry}>
+      <pointsMaterial
+        map={glow}
+        size={0.5}
+        sizeAttenuation
+        color="#9fb4d8"
+        transparent
+        opacity={0.5}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
+  );
+}
+
+/**
+ * Metal debris among the rocks — bright, angular and reflective where the
+ * asteroids are matte and lumpy, so the field reads as somewhere people have
+ * been rather than untouched geology.
+ */
+function Debris({ count = 22 }: { count?: number }) {
+  const seeds = useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) => ({
+        ox: (h(i * 11 + 1) - 0.5) * 54,
+        oy: (h(i * 11 + 2) - 0.5) * 34,
+        z: -h(i * 11 + 3) * TOTAL,
+        scale: 0.22 + h(i * 11 + 4) * 0.5,
+        spin: 0.3 + h(i * 11 + 5) * 0.9,
+        rx: h(i * 11 + 6) * Math.PI,
+        ry: h(i * 11 + 7) * Math.PI,
+      })),
+    [count],
+  );
+
+  return (
+    <Instances limit={count} range={count}>
+      <boxGeometry args={[1, 0.18, 0.42]} />
+      <meshStandardMaterial color="#94a3b8" metalness={0.95} roughness={0.25} />
+      {seeds.map((d, i) => (
+        <Asteroid key={i} {...d} />
+      ))}
+    </Instances>
+  );
+}
+
+/**
  * Asteroid field — one instanced draw call for the whole corridor.
  *
  * Sparse and wildly uneven in size, rather than a uniform gravel cloud. A cubed
@@ -678,6 +802,8 @@ function Voyage({ reduced }: { reduced: boolean }) {
       <Nebula color="#be185d" offset={[-20, -7]} z={-SPACING * 7.5} zone={[0.68, 0.78, 0.94, 1]} size={48} glow={glow} />
 
       <Asteroids count={reduced ? 10 : 24} />
+      {!reduced && <Debris count={22} />}
+      <Dust count={reduced ? 120 : 320} glow={glow} />
       <RingedPlanet />
       {!reduced && <Streaks count={40} />}
 
@@ -797,10 +923,9 @@ export default function SpaceVoyage() {
       spaceScroll.velocity = p - spaceScroll.progress;
       spaceScroll.progress = p;
 
-      const idx = Math.min(
-        STOPS.length - 1,
-        Math.floor((p * (TOTAL + START_Z)) / SPACING),
-      );
+      // Nearest station to the eased position, so the caption changes halfway
+      // between stops rather than lagging a station and a half behind.
+      const idx = activeStop(p);
       if (idx !== lastIndex) {
         lastIndex = idx;
         setActive(idx);

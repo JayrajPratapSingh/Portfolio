@@ -23,6 +23,8 @@ export default function TechStation({
   const ringA = useRef<THREE.Mesh>(null);
   const ringB = useRef<THREE.Mesh>(null);
   const drone = useRef<THREE.Group>(null);
+  const beacon = useRef<THREE.Mesh>(null);
+  const thruster = useRef<THREE.Mesh>(null);
 
   useFrame((state, dt) => {
     if (ringA.current) ringA.current.rotation.z += dt * 0.22;
@@ -33,6 +35,22 @@ export default function TechStation({
       const t = state.clock.elapsedTime * 0.55;
       drone.current.position.set(Math.cos(t) * 5.4, Math.sin(t * 1.4) * 1.6, Math.sin(t) * 5.4);
       drone.current.rotation.y = -t;
+    }
+
+    const t = state.clock.elapsedTime;
+
+    // Navigation beacon: a sharp blink rather than a sine fade, so it reads as
+    // a signal light instead of a glow.
+    if (beacon.current) {
+      const blink = Math.pow((Math.sin(t * 2.2) + 1) / 2, 6);
+      (beacon.current.material as THREE.MeshBasicMaterial).opacity = 0.15 + blink * 0.85;
+    }
+
+    // Station-keeping thruster under the platform, guttering slightly.
+    if (thruster.current) {
+      const flare = 0.55 + Math.sin(t * 9) * 0.12 + Math.sin(t * 23) * 0.06;
+      thruster.current.scale.set(1, flare, 1);
+      (thruster.current.material as THREE.MeshBasicMaterial).opacity = 0.16 + flare * 0.16;
     }
   });
 
@@ -101,6 +119,45 @@ export default function TechStation({
         </mesh>
         <pointLight color={color} intensity={3} distance={6} />
       </group>
+
+      {/* Hull plating around the platform edge — six short panels, one per
+          hex face, to break the silhouette at close range. */}
+      {[0, 1, 2, 3, 4, 5].map((i) => {
+        const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+        return (
+          <mesh
+            key={`panel-${i}`}
+            position={[Math.cos(a) * 2.95, -3.75, Math.sin(a) * 2.95]}
+            rotation={[0, -a, 0]}
+          >
+            <boxGeometry args={[1.5, 0.34, 0.12]} />
+            <meshStandardMaterial color="#273244" metalness={0.85} roughness={0.45} />
+          </mesh>
+        );
+      })}
+
+      {/* mast + navigation beacon */}
+      <mesh position={[0, 5.9, 0]}>
+        <cylinderGeometry args={[0.035, 0.035, 1.6, 5]} />
+        <meshStandardMaterial color="#475569" metalness={0.9} roughness={0.3} />
+      </mesh>
+      <mesh ref={beacon} position={[0, 6.8, 0]}>
+        <sphereGeometry args={[0.17, 10, 10]} />
+        <meshBasicMaterial color="#ff5f57" transparent opacity={0.2} />
+      </mesh>
+
+      {/* station-keeping thruster, firing downward off the platform */}
+      <mesh ref={thruster} position={[0, -4.6, 0]}>
+        <coneGeometry args={[0.7, 2.4, 12, 1, true]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.2}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
     </group>
   );
 }
