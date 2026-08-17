@@ -118,6 +118,42 @@ export function mergeProjects(
   });
 }
 
+/**
+ * Names the landing page uses that differ from the `techStack` spelling.
+ * Keyed by the display name, lowercase.
+ */
+const TECH_ALIASES: Record<string, string[]> = {
+  websocket: ["socket.io", "websockets", "ws"],
+  "gen ai": ["genai", "llm", "openai", "gemini", "anthropic"],
+};
+
+/**
+ * Resolve a display name to the `techStack` term to filter by, or null when no
+ * project uses it.
+ *
+ * The voyage links each stack to `/projects?tech=…`. Half those names have no
+ * match in the project data — "WebSocket" is stored as "Socket.IO", and
+ * TypeScript, Firebase and React Native appear on no project at all — so
+ * linking them unconditionally would send visitors to an empty list. Callers
+ * use a null return to render no link rather than a dead one.
+ */
+export function resolveTechFilter(
+  name: string,
+  list: Project[] = projects,
+): string | null {
+  const want = new Set([
+    name.toLowerCase(),
+    ...(TECH_ALIASES[name.toLowerCase()] ?? []),
+  ]);
+
+  for (const p of list) {
+    for (const t of p.techStack) {
+      if (want.has(t.toLowerCase())) return t;
+    }
+  }
+  return null;
+}
+
 /** True when a project has enough long-form content to be worth linking to. */
 export function hasCaseStudy(project: Project): boolean {
   return Boolean(project.caseStudy?.problem);

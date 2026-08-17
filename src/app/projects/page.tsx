@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ExternalLink,
@@ -15,6 +16,7 @@ import {
   Search,
   ArrowRight,
   BookOpen,
+  X,
 } from "lucide-react";
 import { FaGithub, FaNodeJs, FaReact, FaDocker } from "react-icons/fa";
 import {
@@ -72,8 +74,24 @@ function categoryIcon(category: ProjectCategory) {
 
 type Filter = "All" | ProjectCategory;
 
+/**
+ * `useSearchParams` opts a client component into request-time rendering, which
+ * Next rejects on a statically-rendered page unless it sits under a Suspense
+ * boundary. The page shell provides one; the work happens in the inner
+ * component.
+ */
 export default function ProjectsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProjectsPageInner />
+    </Suspense>
+  );
+}
+
+function ProjectsPageInner() {
   const reduced = useReducedMotion();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [filter, setFilter] = useState<Filter>("All");
   const [query, setQuery] = useState("");
   const stored = usePublicContent<Project[]>("projects", projects);
@@ -81,20 +99,37 @@ export default function ProjectsPage() {
   // `caseStudy` existed still resolves its write-up.
   const projectsData = useMemo(() => mergeProjects(stored), [stored]);
 
+  /**
+   * `?tech=Docker` — the landing page's voyage links each technology here, so
+   * a visitor who sees a stack they care about lands on the work that used it
+   * rather than the whole list.
+   */
+  const tech = searchParams.get("tech");
+
+  const clearTech = () => {
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("tech");
+    const qs = next.toString();
+    router.replace(qs ? `/projects?${qs}` : "/projects", { scroll: false });
+  };
+
   const featured = useMemo(() => projectsData.filter((p) => p.featured), [projectsData]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const t = tech?.trim().toLowerCase();
     return projectsData.filter((p) => {
       const matchesCat = filter === "All" || p.category === filter;
+      const matchesTech =
+        !t || p.techStack.some((x) => x.toLowerCase() === t);
       const matchesQuery =
         !q ||
         p.title.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q) ||
-        p.techStack.some((t) => t.toLowerCase().includes(q));
-      return matchesCat && matchesQuery;
+        p.techStack.some((x) => x.toLowerCase().includes(q));
+      return matchesCat && matchesTech && matchesQuery;
     });
-  }, [filter, query, projectsData]);
+  }, [filter, query, tech, projectsData]);
 
   return (
     <main className="relative min-h-screen overflow-hidden text-foreground">
@@ -153,6 +188,24 @@ export default function ProjectsPage() {
             </label>
           </div>
 
+          {/* Active tech filter — arriving from the landing page's voyage with
+              a filter already applied is confusing unless it is visible and
+              removable. */}
+          {tech && (
+            <div className="mt-6 flex items-center gap-3">
+              <span className="text-sm text-foreground/50">Filtered by</span>
+              <button
+                type="button"
+                onClick={clearTech}
+                className="group inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-400/10 px-4 py-1.5 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-400/20 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-300"
+                aria-label={`Remove ${tech} filter`}
+              >
+                {tech}
+                <X size={14} className="opacity-60 group-hover:opacity-100" />
+              </button>
+            </div>
+          )}
+
           {/* tabs */}
           <div className="mt-8 flex flex-wrap gap-2">
             {(["All", ...projectCategories] as Filter[]).map((cat) => {
@@ -195,9 +248,20 @@ export default function ProjectsPage() {
           <div className={cn("mt-12 rounded-3xl p-12 text-center text-foreground/60", glass)}>
             No projects match{" "}
             <span className="font-semibold text-foreground">
-              {query ? `“${query}”` : filter}
+              {tech ?? (query ? `“${query}”` : filter)}
             </span>
-            . Try another filter.
+            .{" "}
+            {tech ? (
+              <button
+                type="button"
+                onClick={clearTech}
+                className="font-semibold text-indigo-500 underline-offset-4 hover:underline dark:text-cyan-300"
+              >
+                Show all projects
+              </button>
+            ) : (
+              "Try another filter."
+            )}
           </div>
         )}
       </div>

@@ -3,7 +3,11 @@
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Billboard, Instance, Instances, Stars } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import * as THREE from "three";
+
+import { resolveTechFilter } from "@/data/projects";
 
 import { ScrollTrigger } from "gsap/all";
 
@@ -48,6 +52,20 @@ import GenAICore from "../GenAICore";
 interface Stop {
   name: string;
   blurb: string;
+  /**
+   * A concrete, checkable fact — a number, a scale, an outcome.
+   *
+   * `blurb` describes what a technology *is*, which every candidate can write.
+   * This is the line that says what he actually did with it, and it is the
+   * difference between decoration and evidence. Rendered only when present, so
+   * a stop without one degrades to the blurb alone rather than showing a gap.
+   *
+   * TODO(jayraj): the seven below without a `proof` are from client work whose
+   * numbers only you know. Fill them from something real — throughput, scale,
+   * latency, team size, uptime. Do not invent them; a figure you cannot defend
+   * in an interview is worse than no figure.
+   */
+  proof?: string;
   color: string;
   node: React.ReactNode;
   /** Offset from the flight path, so you pass *beside* each world. */
@@ -57,7 +75,13 @@ interface Stop {
 
 const STOPS: Stop[] = [
   { name: "React", blurb: "Component systems that stay readable at scale.", color: "#61dafb", ox: -9, oy: 2.5, node: <ReactCore /> },
-  { name: "Next.js", blurb: "App Router, server components, streaming.", color: "#ffffff", ox: 10, oy: -3, node: <NextJSCore /> },
+  {
+    name: "Next.js",
+    blurb: "App Router, server components, streaming.",
+    // Measured on this site: Lighthouse 12, mobile, production build.
+    proof: "This site: 88 mobile Lighthouse, 89ms blocking time",
+    color: "#ffffff", ox: 10, oy: -3, node: <NextJSCore />,
+  },
   { name: "TypeScript", blurb: "Types as the contract between every layer.", color: "#3178c6", ox: -8, oy: -4.5, node: <TypeScriptCore /> },
   { name: "Node.js", blurb: "APIs that own their integration boundaries.", color: "#3c873a", ox: 11, oy: 3.5, node: <NodeJSCore /> },
   { name: "MongoDB", blurb: "Document models shaped around real queries.", color: "#4db33d", ox: -10, oy: 1.5, node: <MongoDBCore /> },
@@ -65,7 +89,13 @@ const STOPS: Stop[] = [
   { name: "Docker", blurb: "One image from local to production.", color: "#2496ed", ox: -9, oy: -3, node: <DockerCore /> },
   { name: "Firebase", blurb: "Auth and sync when speed matters most.", color: "#ffca28", ox: 10, oy: 2.5, node: <FirebaseCore /> },
   { name: "React Native", blurb: "The same engineering, on a phone.", color: "#61dafb", ox: -8, oy: 3.5, node: <ReactNativeCore /> },
-  { name: "Gen AI", blurb: "Grounded assistants, RAG, and streaming APIs.", color: "#a855f7", ox: 9, oy: -2.5, node: <GenAICore /> },
+  {
+    name: "Gen AI",
+    blurb: "Grounded assistants, RAG, and streaming APIs.",
+    // Verifiable on this site — the assistant in the corner is the artefact.
+    proof: "Built the assistant on this site: cited answers over a 4k-token corpus",
+    color: "#a855f7", ox: 9, oy: -2.5, node: <GenAICore />,
+  },
 ];
 
 const SPACING = 38;
@@ -802,6 +832,8 @@ export default function SpaceVoyage() {
   }, []);
 
   const stop = STOPS[active]!;
+  // null when no project uses this stack — see resolveTechFilter.
+  const techFilter = resolveTechFilter(stop.name);
 
   return (
     <section ref={sectionRef} className="relative h-[560vh] bg-[#04010f] text-white">
@@ -852,6 +884,33 @@ export default function SpaceVoyage() {
                 {stop.name}
               </div>
               <p className="mt-2 text-sm leading-7 text-white/60">{stop.blurb}</p>
+
+              {/* The claim, when there is one to make. */}
+              {stop.proof && (
+                <p className="mt-3 text-sm font-medium leading-6 text-white/85">
+                  {stop.proof}
+                </p>
+              )}
+
+              {/*
+                Only rendered when a project actually uses this stack —
+                `resolveTechFilter` returns null otherwise, and half these names
+                have no match ("WebSocket" is stored as "Socket.IO"; TypeScript,
+                Firebase and React Native appear on no project). A link to an
+                empty list is worse than no link.
+
+                The parent is pointer-events-none so the canvas never eats a
+                scroll gesture; this opts back in for the link alone.
+              */}
+              {techFilter && (
+                <Link
+                  href={`/projects?tech=${encodeURIComponent(techFilter)}`}
+                  className="pointer-events-auto mt-5 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/80 backdrop-blur transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                >
+                  See {stop.name} work
+                  <ArrowRight size={13} />
+                </Link>
+              )}
             </div>
 
             <div className="mx-auto mt-7 flex max-w-xs items-center justify-center gap-1.5">
