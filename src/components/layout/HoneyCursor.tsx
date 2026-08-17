@@ -3,14 +3,27 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Honey cursor — a glowing orb that trails the real pointer with a soft,
- * honey-like lag, plus a tighter core dot. Grows over interactive elements.
- * Purely decorative and additive (the native cursor stays), so it never hurts
- * usability. Auto-disabled on touch / coarse-pointer / reduced-motion devices.
+ * Pointer ring.
+ *
+ * Replaces an earlier glowing orb with a trailing core dot. Two shapes chasing
+ * the pointer at different speeds read as decoration; a single thin ring reads
+ * as an instrument.
+ *
+ * The detail that makes it feel considered is the deformation: the ring
+ * elongates along the direction of travel in proportion to speed and relaxes
+ * back to a circle at rest, so it has weight rather than just position. It
+ * widens and thins over anything interactive, and contracts on press.
+ *
+ * Purely additive — the native cursor stays visible, so this can never hurt
+ * usability. Disabled on touch, coarse pointers and reduced-motion.
+ *
+ * Colour comes from `--cursor-ring`, which each theme defines, rather than
+ * `mix-blend-mode: difference`. Difference blending only inverts against its own
+ * stacking context, and this page is full of transformed and 3D sections that
+ * each create one — the ring would silently stop inverting over them.
  */
 export default function HoneyCursor() {
-  const glow = useRef<HTMLDivElement>(null);
-  const dot = useRef<HTMLDivElement>(null);
+  const ring = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fine = window.matchMedia("(pointer: fine)").matches;
@@ -19,11 +32,12 @@ export default function HoneyCursor() {
 
     let mx = window.innerWidth / 2;
     let my = window.innerHeight / 2;
-    let gx = mx;
-    let gy = my; // glow — slow, honey lag
-    let dx = mx;
-    let dy = my; // dot — fast follow
+    let rx = mx;
+    let ry = my;
+    let vx = 0;
+    let vy = 0;
     let hovering = false;
+    let pressing = false;
     let raf = 0;
 
     const onMove = (e: MouseEvent) => {
@@ -36,20 +50,49 @@ export default function HoneyCursor() {
         'a,button,[role="button"],input,textarea,select,label,summary,.btn-3d',
       );
     };
-    const onDown = () => document.body.classList.add("cursor-press");
-    const onUp = () => document.body.classList.remove("cursor-press");
+    const onDown = () => {
+      pressing = true;
+    };
+    const onUp = () => {
+      pressing = false;
+    };
+    const onLeave = () => {
+      if (ring.current) ring.current.style.opacity = "0";
+    };
+    const onEnter = () => {
+      if (ring.current) ring.current.style.opacity = "1";
+    };
 
     const tick = () => {
-      gx += (mx - gx) * 0.12;
-      gy += (my - gy) * 0.12;
-      dx += (mx - dx) * 0.35;
-      dy += (my - dy) * 0.35;
-      const gs = hovering ? 1.9 : 1;
-      const ds = hovering ? 0.4 : 1;
-      if (glow.current)
-        glow.current.style.transform = `translate(${gx}px, ${gy}px) translate(-50%, -50%) scale(${gs})`;
-      if (dot.current)
-        dot.current.style.transform = `translate(${dx}px, ${dy}px) translate(-50%, -50%) scale(${ds})`;
+      const px = rx;
+      const py = ry;
+
+      // Lag behind the pointer — enough to feel weighted, not enough to feel slow.
+      rx += (mx - rx) * 0.2;
+      ry += (my - ry) * 0.2;
+
+      // Smoothed velocity, so the deformation does not jitter frame to frame.
+      vx += (rx - px - vx) * 0.25;
+      vy += (ry - py - vy) * 0.25;
+
+      const speed = Math.hypot(vx, vy);
+      const stretch = Math.min(0.42, speed * 0.028);
+      const angle = speed > 0.1 ? Math.atan2(vy, vx) : 0;
+
+      const base = hovering ? 2.1 : 1;
+      const press = pressing ? 0.82 : 1;
+
+      const el = ring.current;
+      if (el) {
+        // Rotate into the direction of travel, then stretch along x and pinch y
+        // by half as much, which keeps the apparent area roughly constant.
+        el.style.transform =
+          `translate(${rx}px, ${ry}px) translate(-50%, -50%) ` +
+          `rotate(${angle}rad) ` +
+          `scale(${base * press * (1 + stretch)}, ${base * press * (1 - stretch * 0.5)})`;
+        el.style.borderWidth = hovering ? "1px" : "1.5px";
+      }
+
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -58,6 +101,8 @@ export default function HoneyCursor() {
     window.addEventListener("mouseover", onOver, { passive: true });
     window.addEventListener("mousedown", onDown);
     window.addEventListener("mouseup", onUp);
+    document.addEventListener("mouseleave", onLeave);
+    document.addEventListener("mouseenter", onEnter);
 
     return () => {
       cancelAnimationFrame(raf);
@@ -65,7 +110,8 @@ export default function HoneyCursor() {
       window.removeEventListener("mouseover", onOver);
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
-      document.body.classList.remove("cursor-press");
+      document.removeEventListener("mouseleave", onLeave);
+      document.removeEventListener("mouseenter", onEnter);
     };
   }, []);
 
@@ -74,8 +120,7 @@ export default function HoneyCursor() {
       aria-hidden
       className="honey-cursor pointer-events-none fixed inset-0 z-[9998] hidden md:block"
     >
-      <div ref={glow} className="honey-glow" />
-      <div ref={dot} className="honey-dot" />
+      <div ref={ring} className="cursor-ring" />
     </div>
   );
 }

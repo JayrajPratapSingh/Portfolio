@@ -1,4 +1,15 @@
+import type { Metadata } from "next";
 import Sidebar from "./Sidebar";
+
+/**
+ * The CMS is behind auth, but a redirect is not a crawl directive — if a
+ * dashboard URL is ever linked or leaks into a sitemap, this is what keeps it
+ * out of the index.
+ */
+export const metadata: Metadata = {
+  title: "Dashboard",
+  robots: { index: false, follow: false },
+};
 
 export default function DashboardLayout({
   children,

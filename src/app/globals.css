@@ -31,9 +31,9 @@
 
   --shadow-soft: 0 10px 30px -12px rgba(79, 70, 229, 0.25);
 
-  /* honey cursor (light) */
-  --cursor-dot: #6366f1;
-  --cursor-glow: rgba(99, 102, 241, 0.55);
+  /* pointer ring (light) */
+  --cursor-ring: rgba(79, 70, 229, 0.55);
+  --cursor-ring-fill: rgba(99, 102, 241, 0.06);
 }
 
 /* ================================================================== */
@@ -61,9 +61,9 @@
 
   --shadow-soft: 0 0 40px rgba(34, 211, 238, 0.12);
 
-  /* honey cursor (dark) */
-  --cursor-dot: #22d3ee;
-  --cursor-glow: rgba(34, 211, 238, 0.55);
+  /* pointer ring (dark) */
+  --cursor-ring: rgba(103, 232, 249, 0.7);
+  --cursor-ring-fill: rgba(34, 211, 238, 0.07);
 }
 
 /* Expose tokens as Tailwind color/font utilities (bg-background, etc.) */
@@ -109,33 +109,29 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/*  HONEY CURSOR — a glowing orb that trails the pointer with lag      */
+/*  POINTER RING                                                       */
+/*                                                                     */
+/*  Replaces the old glow-plus-dot pair. Transform is written every     */
+/*  frame from JS (position, direction and stretch), so only the        */
+/*  properties JS does not touch are transitioned here — animating      */
+/*  transform in CSS as well would fight it.                           */
 /* ------------------------------------------------------------------ */
-.honey-glow,
-.honey-dot {
+.cursor-ring {
   position: absolute;
   top: 0;
   left: 0;
+  width: 30px;
+  height: 30px;
   border-radius: 9999px;
+  border: 1.5px solid var(--cursor-ring);
+  background: var(--cursor-ring-fill);
+  backdrop-filter: invert(4%);
   pointer-events: none;
   will-change: transform;
-}
-.honey-glow {
-  width: 42px;
-  height: 42px;
-  background: radial-gradient(circle, var(--cursor-glow) 0%, transparent 70%);
-  filter: blur(4px);
-  transition: opacity 0.3s ease;
-}
-.honey-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--cursor-dot);
-  box-shadow: 0 0 10px var(--cursor-glow);
-  transition: width 0.2s ease, height 0.2s ease;
-}
-.cursor-press .honey-glow {
-  opacity: 0.55;
+  transition:
+    border-width 0.18s ease,
+    background-color 0.18s ease,
+    opacity 0.25s ease;
 }
 /* No custom cursor on touch / coarse-pointer / reduced-motion. */
 @media (hover: none), (pointer: coarse) {

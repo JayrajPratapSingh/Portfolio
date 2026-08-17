@@ -23,7 +23,23 @@ const geistMono = Geist_Mono({
  */
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await getContent("seo", seoDefault);
-  const base = seo.url || siteConfig.url;
+
+  /**
+   * The canonical origin comes from the environment only — deliberately not
+   * from the editable `seo.url`.
+   *
+   * `seo.url` used to win here, and the value stored in MongoDB was still
+   * `http://localhost:3000` from the original seed, so every canonical, OG URL
+   * and sitemap entry advertised localhost. Worse, that made
+   * NEXT_PUBLIC_SITE_URL unable to override it.
+   *
+   * A CMS field is the wrong home for this one value: it has to match where the
+   * site is actually served from, which only the deployment knows. `siteConfig`
+   * already resolves the env var with a localhost fallback, so both agree with
+   * `sitemap.ts` and `robots.ts`. Everything else on the SEO form — title,
+   * description, keywords, OG image — is still editable.
+   */
+  const base = siteConfig.url;
 
   return {
     metadataBase: new URL(base),
@@ -57,7 +73,18 @@ export async function generateMetadata(): Promise<Metadata> {
       follow: true,
       googleBot: { index: true, follow: true, "max-image-preview": "large" },
     },
-    icons: { icon: "/favicon.ico" },
+    /**
+     * No `icons` entry: Next discovers `app/icon.png` and `app/apple-icon.png`
+     * by convention and emits the link tags with correct sizes and hashes. The
+     * old hardcoded `/favicon.ico` pointed at the stock Next.js logo.
+     *
+     * `google` takes the Search Console verification token. Set
+     * NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION and the tag appears; without it the
+     * key is omitted rather than emitted empty.
+     */
+    verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+      : undefined,
   };
 }
 
