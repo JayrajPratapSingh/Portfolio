@@ -10,7 +10,7 @@ import Preloader from "@/components/Preloader";
 import EditPageFab from "@/components/layout/EditPageFab";
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import ThemeTransition from "@/components/layout/ThemeTransition";
-import HoneyCursor from "@/components/layout/HoneyCursor";
+import PointerCursor from "@/components/layout/PointerCursor";
 import { cn } from "@/lib/cn";
 import { isAdminArea } from "@/lib/edit-routes";
 
@@ -30,7 +30,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <HoneyCursor />
+      <PointerCursor />
       <ThemeTransition />
       {!admin && <SmoothScroll />}
       {!admin && <Preloader />}

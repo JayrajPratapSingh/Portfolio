@@ -31,9 +31,10 @@
 
   --shadow-soft: 0 10px 30px -12px rgba(79, 70, 229, 0.25);
 
-  /* pointer ring (light) */
-  --cursor-ring: rgba(79, 70, 229, 0.55);
-  --cursor-ring-fill: rgba(99, 102, 241, 0.06);
+  /* pointer companion (light) */
+  --cursor-ring: rgba(79, 70, 229, 0.35);
+  --cursor-disc-bg: rgba(79, 70, 229, 0.9);
+  --cursor-disc-text: #ffffff;
 }
 
 /* ================================================================== */
@@ -61,9 +62,10 @@
 
   --shadow-soft: 0 0 40px rgba(34, 211, 238, 0.12);
 
-  /* pointer ring (dark) */
-  --cursor-ring: rgba(103, 232, 249, 0.7);
-  --cursor-ring-fill: rgba(34, 211, 238, 0.07);
+  /* pointer companion (dark) */
+  --cursor-ring: rgba(103, 232, 249, 0.4);
+  --cursor-disc-bg: rgba(34, 211, 238, 0.92);
+  --cursor-disc-text: #04010f;
 }
 
 /* Expose tokens as Tailwind color/font utilities (bg-background, etc.) */
@@ -109,38 +111,62 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/*  POINTER RING                                                       */
+/*  POINTER COMPANION                                                  */
 /*                                                                     */
-/*  Replaces the old glow-plus-dot pair. Transform is written every     */
-/*  frame from JS (position, direction and stretch), so only the        */
-/*  properties JS does not touch are transitioned here — animating      */
-/*  transform in CSS as well would fight it.                           */
+/*  Hidden while reading; expands into a labelled disc over anything    */
+/*  actionable. JS writes `transform` every frame (spring position and  */
+/*  open/press scale), so nothing else may transition transform or the  */
+/*  two would fight. Opacity and blur are CSS's to animate.             */
 /* ------------------------------------------------------------------ */
-.cursor-ring {
+.cursor-disc {
   position: absolute;
   top: 0;
   left: 0;
-  width: 30px;
-  height: 30px;
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
   border-radius: 9999px;
-  border: 1.5px solid var(--cursor-ring);
-  background: var(--cursor-ring-fill);
-  backdrop-filter: invert(4%);
+  border: 1px solid var(--cursor-ring);
+  background: var(--cursor-disc-bg);
+  backdrop-filter: blur(3px) saturate(130%);
+  opacity: 0;
   pointer-events: none;
-  will-change: transform;
-  transition:
-    border-width 0.18s ease,
-    background-color 0.18s ease,
-    opacity 0.25s ease;
+  will-change: transform, opacity;
+  transition: opacity 0.22s ease;
 }
-/* No custom cursor on touch / coarse-pointer / reduced-motion. */
+
+.cursor-disc.is-open {
+  opacity: 1;
+}
+
+/* Pointer has left the window entirely. */
+.cursor-disc.is-gone {
+  opacity: 0 !important;
+}
+
+.cursor-disc__text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-align: center;
+  color: var(--cursor-disc-text);
+  /* The disc is scaled by JS; counter-scaling is not possible from CSS, so the
+     label is kept small enough to stay crisp at the one open size. */
+  transform: translateZ(0);
+  user-select: none;
+}
+/* No custom cursor on touch / coarse-pointer / reduced-motion. The component
+   also bails in JS; this is the belt to that braces, and it covers the case
+   where the preference changes after mount. */
 @media (hover: none), (pointer: coarse) {
-  .honey-cursor {
+  .pointer-companion {
     display: none !important;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .honey-cursor {
+  .pointer-companion {
     display: none !important;
   }
 }
